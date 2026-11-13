@@ -14,6 +14,10 @@ existing settings) so the Overview opens on the primary metric (forget_suppressi
 
 Only loopback URLs are accepted. Artifacts marked synthetic are refused. Re-running is safe:
 Evalboard treats identical traces/artifacts as no-ops. Standard library only.
+
+Post-RMU stages of the invalid 5-step RMU run
+20261113T000819Z-inject+verify+unlearn+eval+probes+interp+relearn--631cb361
+are excluded (that unlearning was a no-op). Pre-RMU stages of that run can still be ingested.
 """
 import argparse
 import json
@@ -25,6 +29,56 @@ import urllib.request
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
+
+# 631cb361's post-RMU results are invalid (RMU ran only 5 steps). Keep only pre-RMU
+# stages if this run is ingested again. shuffled_label_control used post_inject features.
+INVALID_POST_RMU_RUN = "20261113T000819Z-inject+verify+unlearn+eval+probes+interp+relearn--631cb361"
+INVALID_POST_RMU_KEEP_SUFFIXES = frozenset({
+    "inject",
+    "inject-base",
+    "verify-injected",
+    "eval-before_unlearn",
+    "probes-before",
+    "probes-content-frozen-post_inject",
+    "probes-content-frozen-pre_inject",
+    "probes-content-refit-post_inject",
+    "probes-content-refit-pre_inject",
+    "probes-content-refit-shuffled_label_control",
+    "probes-forget_vs_retain-frozen-pre_inject",
+    "probes-forget_vs_retain-refit-post_inject",
+    "probes-forget_vs_retain-refit-pre_inject",
+    "probes-forget_vs_retain-refit-shuffled_label_control",
+})
+INVALID_POST_RMU_KEEP_INTERP_SUFFIXES = frozenset({"circuit-post_inject"})
+
+
+def _run_suffix(run_id):
+    return run_id.split(":", 1)[1] if ":" in (run_id or "") else ""
+
+
+def filter_invalid_post_rmu(traces, artifacts):
+    """Drop 631cb361 post-RMU traces/artifacts; leave every other run unchanged."""
+    kept_t, dropped_t = [], 0
+    for t in traces:
+        rid = t.get("run_id") or ""
+        if rid.startswith(INVALID_POST_RMU_RUN) and _run_suffix(rid) not in INVALID_POST_RMU_KEEP_SUFFIXES:
+            dropped_t += 1
+        else:
+            kept_t.append(t)
+    kept_a, dropped_a = [], 0
+    for a in artifacts:
+        rid = a.get("run_id") or ""
+        aid = a.get("id") or ""
+        if rid.startswith(INVALID_POST_RMU_RUN) or aid.startswith(INVALID_POST_RMU_RUN):
+            if _run_suffix(aid) in INVALID_POST_RMU_KEEP_INTERP_SUFFIXES:
+                kept_a.append(a)
+            else:
+                dropped_a += 1
+        else:
+            kept_a.append(a)
+    return kept_t, dropped_t, kept_a, dropped_a
+
+
 
 
 def post(url, path, body):
@@ -166,7 +220,14 @@ def main(argv=None):
     arts = [json.loads(p.read_text()) for p in sorted(interp_dir.glob("*.json"))] if interp_dir.exists() else []
     if any(a.get("synthetic") for a in arts):
         raise SystemExit("Refusing to ingest synthetic artifacts into a real project.")
-    print(f"{len(unique)} traces ({len(traces) - len(unique)} duplicate ids dropped), {len(arts)} interpretability artifacts")
+    n_unique = len(unique)
+    unique, dropped_t, arts, dropped_a = filter_invalid_post_rmu(unique, arts)
+    if dropped_t or dropped_a:
+        print(
+            f"excluded {dropped_t} invalid post-RMU traces and {dropped_a} interp artifacts "
+            f"from {INVALID_POST_RMU_RUN}"
+        )
+    print(f"{len(unique)} traces ({len(traces) - n_unique} duplicate ids dropped), {len(arts)} interpretability artifacts")
     if args.dry_run:
         return 0
     if store is not None:

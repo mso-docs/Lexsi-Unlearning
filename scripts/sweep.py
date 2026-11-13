@@ -135,7 +135,7 @@ def main(argv=None) -> int:
         forget_batches = tokenize_unlearn_batches(tokenizer, forget_ds, batch_size=int(cfg["injection"].get("batch_size", 2)))
         retain_batches = tokenize_unlearn_batches(tokenizer, retain_ds, batch_size=int(cfg["injection"].get("batch_size", 2)))
         hparams = rmu_hparams_from_config(run_cfg)
-        unlearned = run_rmu(model, forget_batches=forget_batches, retain_batches=retain_batches, hparams=hparams)
+        unlearned = run_rmu(model, forget_batches=forget_batches, retain_batches=retain_batches, hparams=hparams, tokenizer=tokenizer)
         forget_scores = evaluate_model_on_items(
             unlearned, tokenizer, build_direct_queries(forget_pairs), max_new_tokens=max_new
         )
@@ -158,6 +158,7 @@ def main(argv=None) -> int:
             "tag": tag,
             "judge_subset": judged,
             "hparams": hparams,
+            "rmu_report": getattr(unlearned, "rmu_report", None),
             "update_layers": run_cfg["rmu"]["update_layers"],
             "scores": summarize_forget_retain(forget=forget_scores, retain=retain_scores, label=tag),
             "finished_at": datetime.now(timezone.utc).isoformat(),

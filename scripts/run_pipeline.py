@@ -57,6 +57,7 @@ from lexsi_unlearn.data import (  # noqa: E402
     load_translation_queries,
     qa_pairs,
 )
+from lexsi_unlearn.resume import carry_pre_rmu_traces, load_pre_rmu_results
 from lexsi_unlearn.evaluate import (  # noqa: E402
     evaluate_model_on_items,
     summarize_forget_retain,
@@ -437,6 +438,17 @@ def parse_args(argv=None):
     )
     parser.add_argument("--run-name", default=None, help="Override the run_id used in results JSON, traces, and wandb.")
     parser.add_argument(
+        "--resume-from-results",
+        default=None,
+        help="Skip inject/verify: reuse the base / injected / before-RMU numbers of an earlier run's results JSON "
+             "(see lexsi_unlearn.resume). Use with --stage unlearn,eval,probes,interp,relearn.",
+    )
+    parser.add_argument(
+        "--resume-traces",
+        default=None,
+        help="Trace JSONL of the run named by --resume-from-results (default: the traces_path recorded in it, /workspace -> repo root).",
+    )
+    parser.add_argument(
         "--force",
         action="store_true",
         help="translate stage: overwrite an existing data/translations.json (otherwise it is left untouched).",
@@ -686,6 +698,21 @@ def main(argv=None) -> int:
         "started_at": datetime.now(timezone.utc).isoformat(),
         "traces_path": str(writer.path),
     }
+    resumed_before_unlearn = False
+    if args.resume_from_results:
+        if any(st in stages for st in ("inject", "verify", "smoke")):
+            raise SystemExit("--resume-from-results replaces inject/verify; drop them from --stage.")
+        prior = load_pre_rmu_results(args.resume_from_results)
+        results.update(prior["values"])
+        resumed_before_unlearn = "before_unlearn" in prior["values"]
+        old_trace = args.resume_traces or str(prior["traces_path"] or "").replace("/workspace/", str(ROOT) + "/", 1)
+        carried = carry_pre_rmu_traces(old_trace, writer.path, prior["run_name"], run_name) if Path(old_trace).is_file() else 0
+        results["resumed_from"] = {
+            "run_name": prior["run_name"], "results": str(args.resume_from_results), "traces": old_trace,
+            "keys": sorted(prior["values"]), "trace_rows_carried": carried,
+            "note": "Pre-RMU numbers (base, injected, before_unlearn + their judge passes) are copied from that run; everything post-RMU was recomputed.",
+        }
+        print(f"Resumed pre-RMU results from {prior['run_name']}: keys={sorted(prior['values'])}, {carried} trace rows carried.")
     wandb_run = _maybe_wandb(cfg, run_name)
 
     model = tokenizer = None
@@ -819,7 +846,7 @@ def main(argv=None) -> int:
         hparams = rmu_hparams_from_config(cfg)
         print("RMU hparams (retune layer_id on 36-layer Tiny Aya):", hparams)
         t0 = time.perf_counter()
-        unlearned = run_rmu(model, forget_batches=forget_batches, retain_batches=retain_batches, hparams=hparams)
+        unlearned = run_rmu(model, forget_batches=forget_batches, retain_batches=retain_batches, hparams=hparams, tokenizer=tokenizer)
         rmu_ms = (time.perf_counter() - t0) * 1000
         save_dir = Path(cfg["paths"]["unlearned_dir"])
         save_dir.mkdir(parents=True, exist_ok=True)
@@ -831,6 +858,7 @@ def main(argv=None) -> int:
             print("See https://safetune.lexsi.ai/user-guide/unlearn/rmu/")
         results["rmu_dir"] = str(save_dir)
         results["rmu_hparams"] = hparams
+        results["rmu_report"] = getattr(unlearned, "rmu_report", None)  # loss curve ends + weight change (see unlearn.run_rmu)
         writer.write_stage(
             "unlearn",
             duration_ms=rmu_ms,
@@ -892,31 +920,34 @@ def main(argv=None) -> int:
                 _emit_eval_groups(writer, results["after_unlearn"][name], items[name], split=name, stage="eval", phase="after_unlearn")
         inj_dir = cfg["paths"].get("inject_adapter_dir")
         if inj_dir and Path(inj_dir).exists():
-            injected, inj_tok = load_base_model(inj_dir, dtype=cfg["model"].get("dtype", "bfloat16"))
-            print("Behavioral eval before RMU (injected):")
-            results["before_unlearn"] = {
-                "forget": _eval_group(injected, inj_tok, items["forget"], max_new, "forget-before"),
-                "retain": _eval_group(injected, inj_tok, items["retain"], max_new, "retain-before"),
-            }
-            for name in UTILITY_SPLITS:
-                if name in items:
-                    results["before_unlearn"][name] = _eval_group(injected, inj_tok, items[name], max_new, f"{name}-before")
-            _maybe_judge(
-                cfg,
-                writer,
-                [
-                    (split, "eval", "before_unlearn", result)
-                    for split, groups in results["before_unlearn"].items()
-                    for result in groups.values()
-                ],
-                results,
-                "judge_before_unlearn",
-            )
-            _emit_eval_groups(writer, results["before_unlearn"]["forget"], items["forget"], split="forget", stage="eval", phase="before_unlearn")
-            _emit_eval_groups(writer, results["before_unlearn"]["retain"], items["retain"], split="retain", stage="eval", phase="before_unlearn")
-            for name in UTILITY_SPLITS:
-                if name in items:
-                    _emit_eval_groups(writer, results["before_unlearn"][name], items[name], split=name, stage="eval", phase="before_unlearn")
+            if resumed_before_unlearn:
+                print('Behavioral eval before RMU: reusing the resumed run\'s numbers (not recomputed).')
+            else:
+                injected, inj_tok = load_base_model(inj_dir, dtype=cfg["model"].get("dtype", "bfloat16"))
+                print("Behavioral eval before RMU (injected):")
+                results["before_unlearn"] = {
+                    "forget": _eval_group(injected, inj_tok, items["forget"], max_new, "forget-before"),
+                    "retain": _eval_group(injected, inj_tok, items["retain"], max_new, "retain-before"),
+                }
+                for name in UTILITY_SPLITS:
+                    if name in items:
+                        results["before_unlearn"][name] = _eval_group(injected, inj_tok, items[name], max_new, f"{name}-before")
+                _maybe_judge(
+                    cfg,
+                    writer,
+                    [
+                        (split, "eval", "before_unlearn", result)
+                        for split, groups in results["before_unlearn"].items()
+                        for result in groups.values()
+                    ],
+                    results,
+                    "judge_before_unlearn",
+                )
+                _emit_eval_groups(writer, results["before_unlearn"]["forget"], items["forget"], split="forget", stage="eval", phase="before_unlearn")
+                _emit_eval_groups(writer, results["before_unlearn"]["retain"], items["retain"], split="retain", stage="eval", phase="before_unlearn")
+                for name in UTILITY_SPLITS:
+                    if name in items:
+                        _emit_eval_groups(writer, results["before_unlearn"][name], items[name], split=name, stage="eval", phase="before_unlearn")
             results["utility"] = {
                 "before_unlearn": _utility_summary(results["before_unlearn"]),
                 "after_unlearn": _utility_summary(results["after_unlearn"]),

@@ -77,14 +77,19 @@ rmu:
   update_layers: [16, 17, 18]
   # Trainer kwarg name (safetune 0.1.18); alias of update_layers.
   update_layer_ids: [16, 17, 18]
-  alpha: 1200.0
+  # Retuned 2026-11-13 after the RMU no-op fix (scripts/rmu_check.py, masked forget loss):
+  # 80 real steps, lr 5e-4, alpha 100 (alpha weights the retain term; 1200 dominated at this lr),
+  # forget_mask "content" = forget MSE ignores the ~359-token shared system preamble + attention-sink positions.
+  # rmu_check: forget ROUGE-L 0.967 -> 0.322, retain 0.662 -> 0.619.
+  alpha: 100.0
   steering_coeff: 20.0
-  lr: 5.0e-5
+  lr: 5.0e-4
   max_num_batches: 80
+  forget_mask: content
   # update_layers for a given layer_id default to [id-2, id-1, id], clipped to [0, n_layers).
   sweep:
     layer_ids: [7, 12, 18, 24, 30]
-    alphas: [600.0, 1200.0, 1800.0]
+    alphas: [50.0, 100.0, 200.0]
     steering_coeffs: [10.0, 20.0, 40.0]
     # Each combination is also judged (primary judge) on a seeded subset: judge_forget_suppression and
     # judge_retain_accuracy on judge_n_forget + judge_n_retain items, same items for every combination.
@@ -93,15 +98,14 @@ rmu:
     judge_n_forget: 20
     judge_n_retain: 20
     judge_seed: 20261112
-    # Modest first pass (7 runs). scripts/sweep.py --grid expands the full product (45).
+    # Trimmed to 5 runs on 2026-11-13 so the main chain ends early enough for Earth to fit before 07:30 ET;
+    # (layer 30) and (layer 18, steering 10) moved to the sweep-extra queue job. Modest first pass. scripts/sweep.py --grid expands the full product (45).
     default_combinations:
-      - {layer_id: 7, alpha: 1200.0, steering_coeff: 20.0}
-      - {layer_id: 18, alpha: 600.0, steering_coeff: 20.0}
-      - {layer_id: 18, alpha: 1200.0, steering_coeff: 20.0}
-      - {layer_id: 18, alpha: 1800.0, steering_coeff: 20.0}
-      - {layer_id: 18, alpha: 1200.0, steering_coeff: 10.0}
-      - {layer_id: 18, alpha: 1200.0, steering_coeff: 40.0}
-      - {layer_id: 30, alpha: 1200.0, steering_coeff: 20.0}
+      - {layer_id: 7, alpha: 100.0, steering_coeff: 20.0}
+      - {layer_id: 18, alpha: 50.0, steering_coeff: 20.0}
+      - {layer_id: 18, alpha: 100.0, steering_coeff: 20.0}
+      - {layer_id: 18, alpha: 200.0, steering_coeff: 20.0}
+      - {layer_id: 18, alpha: 100.0, steering_coeff: 40.0}
 
 npo:
   # Optional comparison after a stable RMU run.

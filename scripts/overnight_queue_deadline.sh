@@ -11,7 +11,7 @@ GRACE="${STOP_GRACE_S:-45}"
 LOG="$ROOT/logs/${DEADLINE_LOG_PREFIX:-overnight-deadline}-$(date +%Y%m%d).log"
 log() { echo "[$(date -Is)] $*" | tee -a "$LOG"; }
 log "deadline backstop fired"
-UNITS="${DEADLINE_UNITS:-lexsi-overnight-queue.timer lexsi-overnight-queue.service lexsi-full-after-smoke.timer lexsi-full-after-smoke.service}"
+UNITS="${DEADLINE_UNITS:-lexsi-overnight-queue.timer lexsi-overnight-queue.service lexsi-full-after-smoke.timer lexsi-full-after-smoke.service lexsi-full-fix1.service lexsi-full-fix2.service}"
 for u in $UNITS; do
   st=$(systemctl --user is-active "$u" 2>/dev/null || true)
   if [[ "$st" == active || "$st" == activating || "$st" == waiting ]]; then log "stopping $u (was $st)"; systemctl --user stop "$u" 2>&1 | tee -a "$LOG"; fi

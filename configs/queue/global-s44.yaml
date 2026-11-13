@@ -57,10 +57,11 @@ rmu:
   - 16
   - 17
   - 18
-  alpha: 1200.0
+  alpha: 100.0
   steering_coeff: 20.0
-  lr: 5.0e-05
+  lr: 0.0005
   max_num_batches: 80
+  forget_mask: content
   sweep:
     layer_ids:
     - 7
@@ -69,9 +70,9 @@ rmu:
     - 24
     - 30
     alphas:
-    - 600.0
-    - 1200.0
-    - 1800.0
+    - 50.0
+    - 100.0
+    - 200.0
     steering_coeffs:
     - 10.0
     - 20.0
@@ -82,26 +83,20 @@ rmu:
     judge_seed: 20261112
     default_combinations:
     - layer_id: 7
-      alpha: 1200.0
+      alpha: 100.0
       steering_coeff: 20.0
     - layer_id: 18
-      alpha: 600.0
+      alpha: 50.0
       steering_coeff: 20.0
     - layer_id: 18
-      alpha: 1200.0
+      alpha: 100.0
       steering_coeff: 20.0
     - layer_id: 18
-      alpha: 1800.0
+      alpha: 200.0
       steering_coeff: 20.0
     - layer_id: 18
-      alpha: 1200.0
-      steering_coeff: 10.0
-    - layer_id: 18
-      alpha: 1200.0
+      alpha: 100.0
       steering_coeff: 40.0
-    - layer_id: 30
-      alpha: 1200.0
-      steering_coeff: 20.0
 npo:
   enabled: false
   variant: npo_grad_diff

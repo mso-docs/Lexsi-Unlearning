@@ -122,17 +122,130 @@ def merge_adapter_if_any(model):
     return model
 
 
+def _upcast_fp32(model):
+    """Same effect as SafeTune's _fp32_for_training: train bf16/fp16 models in fp32 (the caller casts back afterwards)."""
+    import torch
+
+    if {p.dtype for p in model.parameters()} & {torch.float16, torch.bfloat16}:
+        model.float()
+    return model
+
+
+def cycle_to(batches, n: int) -> list:
+    """Repeat `batches` round-robin until there are `n` of them (a list of references, no copies).
+
+    SafeTune's rmu_unlearn zips the forget and retain batch iterables and stops at the SHORTER one. With the 40-row TOFU
+    forget01 split and batch_size 8 that is 5 batches, so `max_num_batches: 80` silently became 5 optimizer steps (about
+    0.2% relative weight change: a no-op). The authors' RMU loop makes ~80 steps by cycling through its data.
+    """
+    batches = list(batches)
+    if not batches:
+        raise ValueError("cycle_to: no batches to cycle")
+    return [batches[i % len(batches)] for i in range(int(n))]
+
+
+class _RmuLossLog:
+    """Capture rmu_unlearn's per-step INFO records (step, total, forget, retain losses) and print a short curve."""
+
+    _LOGGERS = ("safetune.interventions.unlearn.rmu", "safetune.unlearn.rmu")
+
+    def __init__(self):
+        import logging
+
+        self.rows: list[tuple[int, float, float, float]] = []
+        outer = self
+
+        class _H(logging.Handler):
+            def emit(self, record):  # noqa: ANN001
+                msg = str(record.msg)
+                if msg.startswith("rmu_unlearn: step") and isinstance(record.args, tuple) and len(record.args) == 4:
+                    outer.rows.append(tuple(float(a) for a in record.args))
+
+        self._handler = _H(level=logging.INFO)
+        self._logging = logging
+        self._saved = []
+
+    def __enter__(self):
+        for name in self._LOGGERS:
+            lg = self._logging.getLogger(name)
+            self._saved.append((lg, lg.level))
+            lg.addHandler(self._handler)
+            if lg.getEffectiveLevel() > self._logging.INFO:
+                lg.setLevel(self._logging.INFO)
+        return self
+
+    def __exit__(self, *exc):
+        for lg, level in self._saved:
+            lg.removeHandler(self._handler)
+            lg.setLevel(level)
+        return False
+
+    def report(self, every: int = 10) -> dict:
+        if not self.rows:
+            return {"steps": 0}
+        for step, total, forget, retain in self.rows:
+            if int(step) == 1 or int(step) % every == 0 or int(step) == len(self.rows):
+                print(f"  rmu step {int(step):3d}: loss={total:.4g} forget={forget:.4g} retain={retain:.4g}", flush=True)
+        first, last = self.rows[0], self.rows[-1]
+        return {
+            "steps": len(self.rows),
+            "forget_loss_first": first[2], "forget_loss_last": last[2],
+            "retain_loss_first": first[3], "retain_loss_last": last[3],
+        }
+
+
+def _snapshot_update_params(model, layer_ids) -> dict:
+    layers = model.model.layers
+    return {
+        (i, n): p.detach().float().cpu().clone()
+        for i in layer_ids for n, p in layers[i].named_parameters() if "mlp.down_proj" in n
+    }
+
+
+def _weight_delta(before: dict, model) -> dict:
+    """Max-abs / relative-Frobenius / fraction-changed of the updated down_proj weights, in the model's CURRENT dtype."""
+    import torch
+
+    layers = model.model.layers
+    per_layer, num, den, changed, total = {}, 0.0, 0.0, 0, 0
+    for (i, n), w0 in before.items():
+        w1 = dict(layers[i].named_parameters())[n].detach().float().cpu()
+        d = w1 - w0
+        per_layer[f"{i}.{n}"] = {
+            "max_abs": float(d.abs().max()),
+            "rel_fro": float(d.norm() / (w0.norm() + 1e-12)),
+            "frac_changed": float((d != 0).float().mean()),
+        }
+        num += float(d.norm()) ** 2
+        den += float(w0.norm()) ** 2
+        changed += int((d != 0).sum())
+        total += d.numel()
+    return {
+        "rel_fro": (num / max(den, 1e-12)) ** 0.5,
+        "frac_changed": changed / max(total, 1),
+        "per_layer": per_layer,
+    }
+
+
 def run_rmu(
     model,
     *,
     forget_batches,
     retain_batches,
     hparams: dict[str, Any] | None = None,
+    tokenizer=None,
 ):
-    """Run SafeTune RMU and return the unlearned model.
+    """Run SafeTune RMU and return the unlearned model (same dtype as the model that went in).
 
     FLAG: default layer_id=7 should be retuned for 36-layer Tiny Aya.
     Record the layers actually used in the write-up.
+
+    Fixes over the first version (which was a silent no-op on the Spark, 2026-11-12):
+      * batches are cycled to `max_num_batches` (see cycle_to) instead of stopping at the 5 forget batches;
+      * the fp32 training copy is cast back to the incoming dtype, so the in-memory model that is evaluated is exactly
+        the model that is saved and reloaded later (probes, relearn, interp all reload in cfg model.dtype);
+      * the loss curve and the weight change are printed and returned as `model.rmu_report`; fewer optimizer steps than
+        requested raises instead of passing quietly.
     """
     from safetune.runner import unlearn  # type: ignore
 
@@ -142,8 +255,46 @@ def run_rmu(
     # Tiny Aya. The returned model may therefore be fp32.
     kw = {k: v for k, v in (hparams or {}).items() if k in RMU_TRAINER_KEYS and v is not None}
     model = merge_adapter_if_any(model)
-    trainer = unlearn.RMUTrainer(model, **kw)
-    unlearned = trainer.unlearn(forget=forget_batches, retain=retain_batches)
+    in_dtype = next(model.parameters()).dtype
+    n_steps = int(kw.get("max_num_batches") or max(len(forget_batches), len(retain_batches)))
+    kw["max_num_batches"] = n_steps
+    forget_cycled = cycle_to(forget_batches, n_steps)
+    retain_cycled = cycle_to(retain_batches, n_steps)
+    layer_ids = list(kw.get("update_layer_ids") or [])
+    before = _snapshot_update_params(model, layer_ids) if layer_ids else {}
+    # hparams["forget_mask"] == "content": forget loss over the question/answer tokens only (rmu_masked.py explains why).
+    masked = (hparams or {}).get("forget_mask") == "content"
+    with _RmuLossLog() as losslog:
+        if masked:
+            if tokenizer is None:
+                raise ValueError("rmu.forget_mask: content needs run_rmu(..., tokenizer=tokenizer)")
+            from .rmu_masked import content_start, rmu_unlearn_masked
+
+            model = _upcast_fp32(model)
+            start = content_start(tokenizer)
+            print(f"  RMU forget loss masked to tokens >= {start} (system preamble excluded)", flush=True)
+            unlearned = rmu_unlearn_masked(
+                model, retain_cycled, forget_cycled, layer_id=kw["layer_id"], update_layer_ids=kw["update_layer_ids"],
+                alpha=kw["alpha"], steering_coeff=kw["steering_coeff"], lr=kw["lr"], forget_start=start, max_num_batches=n_steps,
+            )
+        else:
+            trainer = unlearn.RMUTrainer(model, **kw)
+            unlearned = trainer.unlearn(forget=forget_cycled, retain=retain_cycled)
+    report = losslog.report()
+    if unlearned is not None and next(unlearned.parameters()).dtype != in_dtype:
+        unlearned = unlearned.to(in_dtype)
+    if before:
+        report["weight_delta"] = _weight_delta(before, unlearned)
+        wd = report["weight_delta"]
+        print(f"  rmu weight change after cast to {in_dtype}: rel_fro={wd['rel_fro']:.3e} frac_changed={wd['frac_changed']:.3f}", flush=True)
+    report["steps_requested"] = n_steps
+    report["batches"] = {"forget": len(forget_batches), "retain": len(retain_batches)}
+    if report.get("steps", 0) != n_steps:
+        raise RuntimeError(f"RMU ran {report.get('steps', 0)} optimizer steps, expected {n_steps}: {report}")
+    try:
+        unlearned.rmu_report = report
+    except Exception:  # pragma: no cover
+        pass
     return unlearned
 
 
@@ -182,4 +333,5 @@ def rmu_hparams_from_config(config: dict[str, Any]) -> dict[str, Any]:
         "steering_coeff": rmu.get("steering_coeff", 20.0),
         "lr": rmu.get("lr", 5e-5),
         "max_num_batches": rmu.get("max_num_batches", 80),
+        "forget_mask": rmu.get("forget_mask"),  # "content" = forget loss ignores the shared system preamble (rmu_masked.py)
     }

@@ -46,12 +46,15 @@ LEAN = {
 # distributions, PCA). CircuitKIT discovery stays main-run-only (heavy, fp32 EAP-IG on two checkpoints).
 INTERP_VARIANTS = {"earth", "fire", "water"}
 
-# Extra RMU sweep points beyond the main sweep's 7 default combinations (layers 7, 18, 30 are already covered there).
+# Extra RMU sweep points beyond the main sweep's 5 default combinations (layers 7 and 18 are covered there).
 EXTRA_SWEEP = [
-    {"layer_id": 12, "alpha": 1200.0, "steering_coeff": 20.0},
-    {"layer_id": 24, "alpha": 1200.0, "steering_coeff": 20.0},
-    {"layer_id": 12, "alpha": 1800.0, "steering_coeff": 20.0},
-    {"layer_id": 24, "alpha": 1800.0, "steering_coeff": 20.0},
+    {"layer_id": 12, "alpha": 100.0, "steering_coeff": 20.0},
+    {"layer_id": 24, "alpha": 100.0, "steering_coeff": 20.0},
+    {"layer_id": 12, "alpha": 200.0, "steering_coeff": 20.0},
+    {"layer_id": 24, "alpha": 200.0, "steering_coeff": 20.0},
+    # moved out of the main sweep (trimmed to 5 combinations so Earth fits overnight)
+    {"layer_id": 30, "alpha": 100.0, "steering_coeff": 20.0},
+    {"layer_id": 18, "alpha": 100.0, "steering_coeff": 10.0},
 ]
 
 
@@ -81,7 +84,7 @@ def build() -> dict[str, str]:
     cfg["paths"]["inject_adapter_dir"] = "artifacts/inject_lora"
     cfg["rmu"]["sweep"]["default_combinations"] = EXTRA_SWEEP
     cfg["interp"] = {"enabled": False}
-    note = "Extra RMU sweep points (layers 12 and 24, alpha 1200 and 1800) on the main run's injected checkpoint."
+    note = "Extra RMU sweep points (layers 12 and 24 at alpha 100 and 200, plus layer 30 and layer 18 / steering 10) on the main run's injected checkpoint."
     cfg["queue"] = {"slug": "sweep-extra", "seed": None, "note": note}
     out["sweep-extra"] = HEADER.format(slug="sweep-extra", note=note) + yaml.safe_dump(cfg, sort_keys=False, width=120)
     return out
