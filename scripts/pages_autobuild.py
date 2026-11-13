@@ -995,7 +995,7 @@ def run_pages_build(
     return redact_info
 
 
-RUN_ID_RE = re.compile(r"20\d{6}T\d{6}Z-[A-Za-z0-9+._-]+")
+RUN_ID_RE = re.compile(r"20\d{6}T\d{6}Z-[A-Za-z0-9+_.:-]*--[0-9a-fA-F]{8,}")
 
 
 def run_ids_in_path(rel: str) -> list[str]:
