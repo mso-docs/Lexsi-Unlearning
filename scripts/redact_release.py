@@ -17,6 +17,7 @@ from __future__ import annotations
 import argparse
 import json
 import re
+import shutil
 import sys
 from collections import Counter
 from dataclasses import dataclass, field
@@ -213,9 +214,12 @@ def should_skip(path: Path, rel: str) -> str | None:
     if path.suffix.lower() in WEIGHT_SUFFIXES:
         return "weight"
     parts = Path(rel).parts
-    if any(p.startswith("checkpoint-") for p in parts):
+    if any(p.startswith("checkpoint-") or p == "checkpoints" for p in parts):
         return "checkpoint"
-    if any(p in WEIGHT_DIR_NAMES for p in parts):
+    if any(
+        p in WEIGHT_DIR_NAMES or p.endswith("-inject_lora") or p.endswith("_inject_lora")
+        for p in parts
+    ):
         return "weight-dir"
     return None
 
@@ -293,8 +297,9 @@ def copy_tree(
             continue
         stats.bytes_in += size
         if not is_text_file(src):
+            # Binary / non-text sources are an expected skip (e.g. probe .pkl),
+            # not a release failure. Only leftovers and real I/O or JSON errors fail.
             stats.skipped_other += 1
-            stats.errors.append(f"{rel}: skipped non-text file ({src.suffix or 'no suffix'})")
             continue
         try:
             text = src.read_text(encoding="utf-8", errors="replace")
@@ -472,6 +477,12 @@ def main(argv: list[str] | None = None) -> int:
 
     # Redact once into the first dest (or a throwaway when dry-run), then copy
     # the same text to any additional dest so counts are not doubled.
+    if not args.dry_run:
+        # Drop a previous tree so skipped files (checkpoints, binaries) cannot linger.
+        for d in dests:
+            if d.exists():
+                shutil.rmtree(d)
+            d.mkdir(parents=True, exist_ok=True)
     primary = dests[0] if dests else Path("/dev/null")
     copy_tree(sources, primary, identities, stats, dry_run=args.dry_run)
     if not args.dry_run:

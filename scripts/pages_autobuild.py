@@ -351,12 +351,22 @@ def parse_redact_report(text: str) -> dict[str, Any]:
                 leftover_count = 1
     else:
         leftover_clean = False
+    errors: list[str] = []
+    err_section = re.search(r"## Errors\s*(.+?)(?:\n## |\Z)", text, re.S)
+    if err_section:
+        for raw in err_section.group(1).splitlines():
+            line = raw.strip().lstrip("- ").strip()
+            if line:
+                errors.append(line)
+    real_errors = [e for e in errors if "skipped non-text file" not in e]
     return {
-        "clean": leftover_clean and leftover_count == 0,
+        "clean": leftover_clean and leftover_count == 0 and not real_errors,
         "leftover": leftover_count,
         "replacements": replacements,
         "files_read": files_read,
         "replacement_total": sum(replacements.values()),
+        "errors": errors,
+        "real_errors": real_errors,
     }
 
 
@@ -866,7 +876,11 @@ def pipeline_python() -> str:
     return sys.executable
 
 
-def run_pages_build(repo: Path, excluded_ids: set[str]) -> dict[str, Any]:
+def run_pages_build(
+    repo: Path,
+    excluded_ids: set[str],
+    allowed_ids: set[str] | None = None,
+) -> dict[str, Any]:
     py = pipeline_python()
     report = repo / "artifacts" / "redact_report.md"
     report.parent.mkdir(parents=True, exist_ok=True)
@@ -888,20 +902,28 @@ def run_pages_build(repo: Path, excluded_ids: set[str]) -> dict[str, Any]:
         capture_output=True,
         text=True,
     )
+    report_text = report.read_text(encoding="utf-8") if report.is_file() else ""
+    redact_info = parse_redact_report(report_text)
     if redact.returncode != 0:
-        raise AutobuildError(
-            "redact_release.py failed: " + (redact.stderr or redact.stdout or "")[-2000:]
-        )
-    text = report.read_text(encoding="utf-8") if report.is_file() else ""
-    redact_info = parse_redact_report(text)
+        # Older redact_release.py treated non-text skips as errors and exited 1
+        # even with 0 leftover tokens. If the report itself is clean, continue.
+        if redact_info.get("clean") and not redact_info.get("real_errors"):
+            log(
+                "redact exited non-zero but the report is clean "
+                "(non-text skips only); continuing"
+            )
+        else:
+            raise AutobuildError(
+                "redact_release.py failed: " + (redact.stderr or redact.stdout or "")[-2000:]
+            )
     if not redact_info["clean"]:
         raise AutobuildError(
             f"redaction report is not clean (leftover={redact_info.get('leftover')})"
         )
 
-    removed = filter_excluded_release_traces(repo, excluded_ids)
+    removed = filter_excluded_release_traces(repo, excluded_ids, allowed_ids)
     if removed:
-        log(f"filtered {removed} excluded trace file(s) from release/")
+        log(f"filtered {removed} excluded or in-progress file(s) from release/")
 
     evalboard = detect_evalboard()
     env = os.environ.copy()
@@ -916,6 +938,8 @@ def run_pages_build(repo: Path, excluded_ids: set[str]) -> dict[str, Any]:
 
     traces_dir = repo / "release" / "pages_src" / "traces"
     traces = sorted(traces_dir.glob("*.jsonl")) if traces_dir.is_dir() else []
+    if allowed_ids is not None:
+        traces = [f for f in traces if f.stem in allowed_ids]
     if not traces:
         raise AutobuildError("No scrubbed traces left to export after exclusions")
 
@@ -971,24 +995,62 @@ def run_pages_build(repo: Path, excluded_ids: set[str]) -> dict[str, Any]:
     return redact_info
 
 
-def filter_excluded_release_traces(repo: Path, excluded_ids: set[str]) -> int:
+RUN_ID_RE = re.compile(r"20\d{6}T\d{6}Z-[A-Za-z0-9+._-]+")
+
+
+def run_ids_in_path(rel: str) -> list[str]:
+    return RUN_ID_RE.findall(rel.replace("\\", "/"))
+
+
+def allowed_finished_run_ids(status: dict[str, Any], state: dict[str, Any]) -> set[str]:
+    """Finished, non-excluded run_ids — including ones held at install (e.g. smoke)."""
+    allowed: set[str] = set()
+    for run in iter_finished_runs(status):
+        rid = str(run["run_id"])
+        if not is_excluded(rid, state):
+            allowed.add(rid)
+    return allowed
+
+
+def filter_excluded_release_traces(
+    repo: Path,
+    excluded_ids: set[str],
+    allowed_ids: set[str] | None = None,
+) -> int:
+    """Drop release files for excluded or not-yet-finished run_ids (path-wide)."""
     removed = 0
     roots = [
         repo / "release" / "pages_src",
         repo / "release" / "hf_dataset",
     ]
-    if not excluded_ids:
-        return 0
+    fake_state = {"excluded": {i: {} for i in excluded_ids}}
     for root in roots:
         if not root.exists():
             continue
-        for path in root.rglob("*"):
+        for path in list(root.rglob("*")):
             if not path.is_file():
                 continue
-            stem = path.stem
-            if any(is_excluded(stem, {"excluded": {i: {} for i in excluded_ids}}) or stem == i or i in stem for i in excluded_ids):
+            rel = path.relative_to(root).as_posix()
+            ids = run_ids_in_path(rel) or run_ids_in_path(path.stem)
+            drop = False
+            for rid in ids:
+                if is_excluded(rid, fake_state) or rid in excluded_ids:
+                    drop = True
+                    break
+                if allowed_ids is not None and rid not in allowed_ids:
+                    drop = True
+                    break
+            if drop:
                 path.unlink()
                 removed += 1
+        # Remove empty leftover dirs (e.g. checkpoints/, excluded run folders).
+        for dirpath in sorted((d for d in root.rglob("*") if d.is_dir()), key=lambda d: len(d.parts), reverse=True):
+            try:
+                next(dirpath.iterdir())
+            except StopIteration:
+                dirpath.rmdir()
+            except OSError:
+                pass
     return removed
 
 
@@ -1304,7 +1366,9 @@ def cycle(
     sync_results(repo, spark_env, use_native=use_native_git and use_native_rsync)
 
     try:
-        redact_info = run_pages_build(repo, excluded_id_set(state))
+        allowed = allowed_finished_run_ids(status, state)
+        log("pages ingest allowlist: " + (", ".join(sorted(allowed)) or "(none)"))
+        redact_info = run_pages_build(repo, excluded_id_set(state), allowed)
     except AutobuildError as exc:
         payload = {
             "ok": False,

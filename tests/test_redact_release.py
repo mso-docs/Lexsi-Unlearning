@@ -193,6 +193,38 @@ class RedactReleaseTests(unittest.TestCase):
             self.assertEqual(self._run(), 1)
         self.assertIn("leftover", self.report.read_text().lower())
 
+    def test_nontext_skips_do_not_fail_write(self):
+        pkl = self.paths["artifacts"] / "results" / "probes-run-1.pkl"
+        pkl.write_bytes(b"\x00binary-probe-data")
+        self.assertEqual(self._run(), 0)
+        self.assertFalse((self.hf / "results" / "probes-run-1.pkl").exists())
+        report = self.report.read_text()
+        self.assertIn("Other skips: 1", report)
+        self.assertNotIn("## Errors", report)
+
+    def test_skips_circuitkit_checkpoint_trees(self):
+        ck = (
+            self.paths["artifacts"]
+            / "circuitkit"
+            / "run-1"
+            / "checkpoints"
+            / "merged-inject_lora"
+        )
+        ck.mkdir(parents=True)
+        (ck / "config.json").write_text('{"model_type": "x"}\n', encoding="utf-8")
+        (ck / "tokenizer.json").write_text('{"unused": true}\n', encoding="utf-8")
+        (ck / "chat_template.jinja").write_text("{{ bos }}\n", encoding="utf-8")
+        scores = self.paths["artifacts"] / "circuitkit" / "run-1" / "post_rmu_scores.json"
+        scores.write_text('{"ok": true}\n', encoding="utf-8")
+        self.assertEqual(self._run(), 0)
+        dest = self.hf / "circuitkit" / "run-1"
+        self.assertTrue((dest / "post_rmu_scores.json").is_file())
+        self.assertFalse((dest / "checkpoints").exists())
+        self.assertFalse((dest / "checkpoints" / "merged-inject_lora" / "config.json").exists())
+        report = self.report.read_text()
+        self.assertIn("Weight / checkpoint files skipped:", report)
+        self.assertNotIn("## Errors", report)
+
 
 if __name__ == "__main__":
     unittest.main()
