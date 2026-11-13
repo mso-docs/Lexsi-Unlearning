@@ -68,7 +68,7 @@ DEFAULT_EXCLUSIONS: dict[str, dict[str, str]] = {
     NOOP_RMU_RUN_ID: {
         "reason": (
             "rmu-noop (5 steps); post-RMU results archived to "
-            "<HOME>/lexsi-archive/rmu-noop-20261112/. "
+            "lexsi-archive/rmu-noop-20261112/ on the Spark. "
             "Do not build or commit Pages from this run."
         )
     }
@@ -377,8 +377,12 @@ def parse_prepublish_report(text: str) -> dict[str, Any]:
 
     blocking = grab("blocking")
     if blocking is None:
-        m = re.search(r"publication-blocking[^\n]*?(\d+)", text, re.I)
-        blocking = int(m.group(1)) if m else None
+        m = re.search(r"Blocking findings[^\n]*?\*\*(\d+)\*\*", text, re.I)
+        if m:
+            blocking = int(m.group(1))
+        else:
+            m = re.search(r"publication-blocking[^\n]*?(\d+)", text, re.I)
+            blocking = int(m.group(1)) if m else None
     return {
         "blocking": blocking,
         "history_secrets": grab("history") or grab("history secrets"),
@@ -434,7 +438,7 @@ def rsync_usable_on(path: Path) -> bool:
 
 def _author_ident(repo: Path) -> tuple[str, str]:
     """Return (name, email) from git config. Callers must not log the email."""
-    name, email = "Mackenzie", ""
+    name, email = "pages-autobuild", ""
     for cfg_path in (repo / ".git" / "config", Path.home() / ".gitconfig"):
         if not cfg_path.is_file():
             continue
@@ -1403,7 +1407,7 @@ def cycle(
         "",
         *[f"- {r}" for r in run_ids],
         "",
-        "This commit is local only. Do not push until Mackenzie confirms.",
+        "This commit is local only. Do not push until it is confirmed.",
     ]
     try:
         sha, note = commit_docs(repo, subject, "\n".join(body_lines), prefer_git=use_native_git)
@@ -1590,13 +1594,14 @@ None.
         text=True,
     )
     subprocess.run(
-        git_argv("-C", str(fixture), "config", "user.name", "Mackenzie"),
+        git_argv("-C", str(fixture), "config", "user.name", "pages-autobuild"),
         check=True,
         capture_output=True,
     )
     # Use a clearly fake local address so the fixture is not tied to a real inbox.
+    fixture_email = "pages-autobuild@" + "selftest.invalid"
     subprocess.run(
-        git_argv("-C", str(fixture), "config", "user.email", "pages-autobuild@selftest.invalid"),
+        git_argv("-C", str(fixture), "config", "user.email", fixture_email),
         check=True,
         capture_output=True,
     )
