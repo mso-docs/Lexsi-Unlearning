@@ -2,6 +2,7 @@
 """Push a finished run's traces and interpretability artifacts into a LOCAL Evalboard (Mac side).
 
     python3 scripts/ingest_evalboard.py --url http://127.0.0.1:8765 --run 20261112T220000Z-smoke--e191e41f
+    python3 scripts/ingest_evalboard.py --db release/pages_workspace.sqlite3 --run <run_id>
     python3 scripts/ingest_evalboard.py --run <run_id> --dry-run        # validate/count only
 
 Reads (after scripts/sync_from_spark.sh):
@@ -40,10 +41,51 @@ def get(url, path):
         return json.load(resp)
 
 
-def ensure_layout(url, layout_file):
-    """Merge the metric definitions in layout_file into the workspace layout (by id). Returns a status string."""
+def load_evalboard():
+    """Import evalboard.core from EVALBOARD_ROOT or a sibling modular_dashboard checkout."""
+    import os
+    import sys
+    candidates = []
+    env = (os.environ.get("EVALBOARD_ROOT") or "").strip()
+    if env:
+        candidates.append(Path(env))
+    here = ROOT.parent
+    candidates.extend(
+        [
+            here / "Code" / "modular_dashboard",
+            here / "code" / "modular_dashboard",
+            Path.home() / "Documents" / "Code" / "modular_dashboard",
+            Path.home() / "Documents" / "code" / "modular_dashboard",
+        ]
+    )
+    for c in candidates:
+        if (c / "evalboard" / "core.py").is_file():
+            sys.path.insert(0, str(c))
+            from evalboard.core import Store  # noqa: WPS433
+            return Store
+    raise SystemExit(
+        "Could not find the Evalboard toolkit. Set EVALBOARD_ROOT to the modular_dashboard checkout."
+    )
+
+
+def store_post_traces(store, traces):
+    if not traces:
+        return {"ingested": 0}
+    n = store.ingest(traces)
+    return {"ingested": n}
+
+
+def store_post_interp(store, artifacts):
+    if not artifacts:
+        return {"ingested": 0}
+    n = store.ingest_interp(artifacts)
+    return {"ingested": n}
+
+
+def merge_layout_metrics(layout, layout_file):
+    """Merge metric definitions from layout_file into a layout dict. Returns (layout, changed)."""
     wanted = json.loads(Path(layout_file).read_text()).get("metrics") or []
-    layout = get(url, "/api/workspace").get("layout") or {}
+    layout = dict(layout or {})
     metrics = list(layout.get("metrics") or [])
     have = {m.get("id"): i for i, m in enumerate(metrics)}
     changed = False
@@ -54,11 +96,28 @@ def ensure_layout(url, layout_file):
         elif bool(m.get("primary")) != bool(metrics[have[m["id"]]].get("primary")):
             metrics[have[m["id"]]] = {**metrics[have[m["id"]]], "primary": bool(m.get("primary"))}
             changed = True
+    layout = {**layout, "metrics": metrics}
+    return layout, changed
+
+
+def ensure_layout(url, layout_file):
+    """Merge the metric definitions in layout_file into the workspace layout (by id). Returns a status string."""
+    layout, changed = merge_layout_metrics(get(url, "/api/workspace").get("layout") or {}, layout_file)
     if not changed:
         return "layout already has the primary metric"
-    saved = post(url, "/api/layout", {**layout, "metrics": metrics})
+    saved = post(url, "/api/layout", layout)
     ok = any(m.get("primary") for m in saved.get("metrics", []))
     return "layout updated" + ("" if ok else " (server dropped the primary flag; restart it from the current modular_dashboard checkout)")
+
+
+def ensure_layout_store(store, layout_file):
+    snap = store.snapshot()
+    layout, changed = merge_layout_metrics(snap.get("layout") or {}, layout_file)
+    if not changed:
+        return "layout already has the primary metric"
+    saved = store.save_layout(layout)
+    ok = any(m.get("primary") for m in saved.get("metrics", []))
+    return "layout updated" + ("" if ok else " (primary flag not saved)")
 
 
 def batches(items, max_bytes=6_000_000):
@@ -77,16 +136,22 @@ def batches(items, max_bytes=6_000_000):
 def main(argv=None):
     ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     ap.add_argument("--run", required=True, help="base run id (file name of the traces JSONL)")
-    ap.add_argument("--url", default="http://127.0.0.1:8765", help="loopback Evalboard URL")
+    ap.add_argument("--url", default="http://127.0.0.1:8765", help="loopback Evalboard URL (ignored when --db is set)")
+    ap.add_argument("--db", default=None, help="Write to an Evalboard SQLite file instead of a running server")
     ap.add_argument("--output-dir", default=os.environ.get("OUTPUT_DIR") or "artifacts")
     ap.add_argument("--dry-run", action="store_true")
     ap.add_argument("--no-layout", action="store_true", help="do not top up the Evalboard layout with the primary metric")
     ap.add_argument("--layout-file", default=str(ROOT / "configs" / "evalboard_layout.json"))
     args = ap.parse_args(argv)
 
-    host = urllib.parse.urlsplit(args.url).hostname
-    if host not in ("127.0.0.1", "localhost", "::1"):
-        raise SystemExit("Refusing non-loopback URL: traces stay on this machine.")
+    store = None
+    if args.db:
+        Store = load_evalboard()
+        store = Store(Path(args.db))
+    else:
+        host = urllib.parse.urlsplit(args.url).hostname
+        if host not in ("127.0.0.1", "localhost", "::1"):
+            raise SystemExit("Refusing non-loopback URL: traces stay on this machine.")
     out = Path(args.output_dir)
     if not out.is_absolute():
         out = ROOT / out
@@ -103,6 +168,17 @@ def main(argv=None):
         raise SystemExit("Refusing to ingest synthetic artifacts into a real project.")
     print(f"{len(unique)} traces ({len(traces) - len(unique)} duplicate ids dropped), {len(arts)} interpretability artifacts")
     if args.dry_run:
+        return 0
+    if store is not None:
+        for b in batches(unique):
+            print("traces:", store_post_traces(store, b))
+        for b in batches(arts):
+            print("interp:", store_post_interp(store, b))
+        if not args.no_layout and Path(args.layout_file).exists():
+            try:
+                print("layout:", ensure_layout_store(store, args.layout_file))
+            except Exception as exc:
+                print("layout: skipped:", type(exc).__name__, exc)
         return 0
     for b in batches(unique):
         print("traces:", post(args.url, "/api/traces", {"traces": b}))

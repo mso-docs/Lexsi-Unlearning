@@ -162,12 +162,38 @@ scripts/sync_to_spark.sh      # rsync code (excludes .git and .env); do not run 
 scripts/prepublish_scan.sh    # gitleaks + PII scan; writes artifacts/prepublish_report.md
 .gitleaks.toml                # extra token rules on top of gitleaks defaults
 .prepublish_allowlist         # reviewed false positives for the prepublish scan
-scripts/sync_from_spark.sh    # pull $OUTPUT_DIR (including traces) back to the Mac
+scripts/sync_from_spark.sh    # pull results; prefer --results (no weights)
+scripts/redact_release.py     # scrub traces/logs into release/ and docs/ (never in place)
+scripts/build_pages.sh        # sync (optional) → redact → ingest → static Evalboard in docs/
 src/lexsi_unlearn/traces.py   # canonical Evalboard v1 JSONL traces
 data/translations.json.example     # shape of data/translations.json (written by --stage translate)
 ```
 
 Where a toolkit API was not fully confirmed in the installed docs, the code has a `# TODO:` with a documentation link instead of a guessed call.
+
+
+## Public GitHub Pages dashboard
+
+A static, scrubbed Evalboard snapshot can be served from this repo's `docs/` folder. It is a read-only HTML/JSON bundle (no API server, no weights). Build it after the runs you want to publish have finished:
+
+```bash
+# Optional: pull traces, results, interp, circuitkit, logs, and translations from the Spark
+# (excludes checkpoints and *.safetensors). Does not touch running jobs.
+scripts/sync_from_spark.sh --results
+
+# Redact into release/hf_dataset/ and release/pages_src/, ingest, export docs/.
+# Fat interpretability dumps are downsampled for the Pages bundle; the full
+# scrubbed copies stay in release/hf_dataset/ (gitignored) for the HF dataset.
+scripts/build_pages.sh
+```
+
+`scripts/redact_release.py` never edits `artifacts/` or `logs/` in place. It rewrites `/home/<user>/...` and `/Users/<user>/...` to `$LEXSI_ROOT`, redacts hostnames, emails, non-loopback IPs, and token-like strings (`hf_`, `sk-or-`, `sk-`, `ghp_`, Bearer, OpenRouter `gen-` ids), and fails if any such token remains. TOFU `real_authors` names (public figures) are listed in `artifacts/redact_report.md` and kept. Run `scripts/redact_release.py --dry-run` for a report without writing.
+
+`data/translations.json`, `artifacts/`, `logs/`, and `release/` are gitignored. Publish only the scrubbed Pages bundle under `docs/` and the scrubbed full tree as a Hugging Face dataset. Model checkpoints (`artifacts/rmu_unlearned/`, about 13 GB) belong in a Hugging Face model repo, not in git.
+
+To publish the site, enable GitHub Pages on the `main` branch with the `/docs` folder as the source. This repository does not turn Pages on for you. Preview locally with `python3 -m http.server -d docs 8080`. Opening `docs/index.html` as a `file://` URL will not load the data.
+
+Before any public push: run `scripts/prepublish_scan.sh` (gitleaks plus PII) on the commit, confirm the redaction report is clean, and wait for an explicit go-ahead. Do not commit `docs/data/` until the weekend runs are finished and scrubbed.
 
 ## Evalboard traces
 

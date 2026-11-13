@@ -45,7 +45,7 @@ SKIP_DIRS = {
 }
 
 # Destined for a public Hugging Face collection even when gitignored.
-HF_DIR_PREFIXES = ("artifacts/", "traces/", "logs/", "outputs/", "data/")
+HF_DIR_PREFIXES = ("release/",)
 HF_SUFFIXES = (".json", ".jsonl", ".md", ".csv", ".tsv", ".txt")
 
 # Local-only secret / cache paths that must never be published.
@@ -58,6 +58,12 @@ LOCAL_ONLY_PREFIXES = (
     "wandb/",
     "lightning_logs/",
     "checkpoints/",
+    # Raw run outputs stay on the machine. Publish only the scrubbed trees
+    # under release/ (Hugging Face) and docs/ (GitHub Pages).
+    "artifacts/",
+    "logs/",
+    "traces/",
+    "outputs/",
 )
 
 REQUIRED_IGNORED = [
@@ -72,6 +78,8 @@ REQUIRED_IGNORED = [
     ".cache/",
     "wandb/",
     ".prepublish_identities",
+    "data/translations.json",
+    "release/",
 ]
 
 TEXT_EXT = {
@@ -133,6 +141,9 @@ SECRET_PREFIX_RE = re.compile(
     r"(hf_[A-Za-z0-9]{8,}|sk-or-(?:v1-)?[A-Za-z0-9]{8,}|sk-[A-Za-z0-9]{8,}|"
     r"ghp_[A-Za-z0-9]{8,}|github_pat_[A-Za-z0-9_]{8,}|AKIA[A-Z0-9]{8,})"
 )
+
+BEARER_RE = re.compile(r"(?i)\bbearer\s+[A-Za-z0-9._\-+=/]{8,}")
+GEN_ID_RE = re.compile(r"\bgen-[A-Za-z0-9]{8,}\b")
 
 MAX_FILE_BYTES = 10 * 1024 * 1024
 SNIPPET_RADIUS = 80
@@ -199,6 +210,8 @@ def redact_secret_token(text: str) -> str:
 
 def redact_text(text: str, identities: list[str]) -> str:
     out = redact_secret_token(text)
+    out = BEARER_RE.sub("Bearer [REDACTED]", out)
+    out = GEN_ID_RE.sub("gen-[REDACTED]", out)
     out = PRIVATE_KEY_RE.sub("[PRIVATE_KEY]", out)
     out = SSH_PUB_RE.sub(lambda m: m.group(0).split()[0] + " [REDACTED]", out)
     out = EMAIL_RE.sub("[EMAIL]", out)
@@ -618,7 +631,7 @@ def scan_line(
             continue
         if user_name.upper() in {"YOU", "USER", "IDENTITY"}:
             continue
-        if user_name.startswith("<") or user_name.startswith("[") or user_name.startswith("$"):
+        if user_name.startswith(("<", "[", "$", "{")):
             continue
         add("path", m.group(0))
     for m in IPV4_RE.finditer(line):
@@ -643,6 +656,12 @@ def scan_line(
         if env_value_is_empty_or_ref(val):
             continue
         add("env", m.group(0), rule=m.group(1))
+    for m in SECRET_PREFIX_RE.finditer(line):
+        add("secret", m.group(0), rule="token-prefix")
+    for m in BEARER_RE.finditer(line):
+        add("secret", m.group(0), rule="bearer")
+    for m in GEN_ID_RE.finditer(line):
+        add("secret", m.group(0), rule="openrouter-gen-id")
     return found
 
 

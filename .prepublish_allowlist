@@ -26,3 +26,7 @@ hostname	scripts/*	spark\.tailXXXX\.ts\.net	documentation placeholder
 email	*	^git@github\.com$	git SSH clone URL, not a personal inbox
 email	*	^git@gitlab\.com$	git SSH clone URL, not a personal inbox
 email	*	^git@bitbucket\.org$	git SSH clone URL, not a personal inbox
+
+# The paper and Beamer author lines are the approved public byline (real name, not a handle).
+username	paper/main.tex	.+	author name approved for the public paper and deck
+username	presentation/main.tex	.+	author name approved for the public paper and deck
