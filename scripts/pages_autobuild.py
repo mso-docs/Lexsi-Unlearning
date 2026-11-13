@@ -299,11 +299,38 @@ def check_quiet_hours() -> None:
 
 def write_last_build(payload: dict[str, Any], path: Path | None = None) -> None:
     dest = path or (LIB / "last_build.json")
+    previous = load_json(dest, {}) if dest.is_file() else {}
     payload = dict(payload)
     payload.setdefault("ts", iso_et())
     payload.setdefault("timezone", "America/New_York")
     payload.setdefault("pushed", False)
     payload.setdefault("ready_to_push", False)
+    # Keep the last successful local commit visible after later idle polls.
+    if payload.get("action") == "committed" and payload.get("commit"):
+        payload["last_success"] = {
+            "commit": payload["commit"],
+            "run_ids": payload.get("run_ids"),
+            "scan": payload.get("scan"),
+            "redaction": payload.get("redaction"),
+            "subject": payload.get("subject"),
+            "ts": payload.get("ts"),
+        }
+    elif previous.get("last_success") or (
+        previous.get("action") == "committed" and previous.get("commit")
+    ):
+        payload["last_success"] = previous.get("last_success") or {
+            "commit": previous.get("commit"),
+            "run_ids": previous.get("run_ids"),
+            "scan": previous.get("scan"),
+            "redaction": previous.get("redaction"),
+            "subject": previous.get("subject"),
+            "ts": previous.get("ts"),
+        }
+        if payload.get("action") in {"idle", "lock_busy", "tunnel_down"} and payload["last_success"].get("commit"):
+            payload.setdefault("commit", payload["last_success"]["commit"])
+            payload["ready_to_push"] = True
+            if not payload.get("run_ids"):
+                payload["run_ids"] = payload["last_success"].get("run_ids") or []
     save_json(dest, payload)
 
 
