@@ -1,0 +1,9 @@
+{
+  "_comment": "Metrics merged into the Evalboard layout by scripts/ingest_evalboard.py (by id; a differing `primary` flag is updated). The headline is judge_forget_suppression = 1 - judge match on forget prompts (higher = the answer does NOT reveal the fact; failed judgments are missing, not zero). forget_suppression (lowercase substring match, strict and brittle for paraphrases and translations) stays as a secondary metric. judge_retain_accuracy / judge_utility_accuracy are the judged retain and world_facts/real_authors utility scores.",
+  "metrics": [
+    {"id": "judge-forget-suppression", "label": "Forget suppression (judge)", "source": "score", "key": "judge_forget_suppression", "aggregation": "mean", "format": "percent", "visible": true, "primary": true},
+    {"id": "forget-suppression", "label": "Forget suppression (substring, secondary)", "source": "score", "key": "forget_suppression", "aggregation": "mean", "format": "percent", "visible": true, "primary": false},
+    {"id": "judge-retain-accuracy", "label": "Retain accuracy (judge)", "source": "score", "key": "judge_retain_accuracy", "aggregation": "mean", "format": "percent", "visible": true, "primary": false},
+    {"id": "judge-utility-accuracy", "label": "Utility accuracy (judge; world facts, real authors)", "source": "score", "key": "judge_utility_accuracy", "aggregation": "mean", "format": "percent", "visible": true, "primary": false}
+  ]
+}

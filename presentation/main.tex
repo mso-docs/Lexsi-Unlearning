@@ -1,0 +1,552 @@
+% Lexsi AI Safety Hackathon -- Phase 2, Track 2b (Safety and Alignment)
+% SKELETON DRAFT for author review. Every number, table cell and chart is a
+% PLACEHOLDER until real results arrive. Never fill these with invented values.
+%
+% Build:  make          -> main.pdf (slides only)
+%         make notes    -> main-notes.pdf (each slide followed by its speaker-notes page)
+\documentclass[aspectratio=169,11pt]{beamer}
+
+% ---- notes toggle: main-notes.pdf is built with \def\withnotes{} prepended ----
+\ifdefined\withnotes
+  \setbeameroption{show notes}
+\else
+  \setbeameroption{hide notes}
+\fi
+
+\usetheme[progressbar=frametitle,numbering=fraction,block=fill]{metropolis}
+\usepackage{booktabs}
+\usepackage{tikz}
+\usetikzlibrary{positioning,arrows.meta,calc,fit,backgrounds}
+\usepackage{xcolor}
+\usepackage{hyperref}
+
+\hypersetup{
+  pdftitle={Suppressed or Removed? Multilingual Machine Unlearning in Tiny Aya Global (draft)},
+  pdfauthor={Mackenzie},
+  pdfsubject={Lexsi AI Safety Hackathon, Phase 2, Track 2b: Safety and Alignment},
+  pdfkeywords={},
+  pdfcreator={LaTeX Beamer},
+  pdfproducer={LaTeX}
+}
+
+% ---- colours ----
+\definecolor{phgrey}{gray}{0.86}
+\definecolor{phtext}{gray}{0.38}
+\definecolor{todocol}{RGB}{214,84,0}
+\definecolor{synred}{RGB}{200,30,30}
+\definecolor{stage}{RGB}{35,55,59}
+\definecolor{accent}{RGB}{235,129,27}
+% toolkit tag colours (pipeline + setup)
+\definecolor{safecol}{RGB}{214,110,10}
+\definecolor{auditcol}{RGB}{30,110,120}
+\definecolor{circcol}{RGB}{170,35,45}
+\definecolor{stdcol}{gray}{0.50}
+
+% ---- placeholder / TODO macros ----
+% \placeholder{label}: inline grey box for any number or table cell
+\newcommand{\placeholder}[1]{{\setlength{\fboxsep}{1.5pt}\colorbox{phgrey}{\scriptsize\color{phtext}\textsc{placeholder}\ifx&#1&\else: #1\fi}}}
+% \phcell: compact placeholder for table cells
+\newcommand{\phcell}{{\setlength{\fboxsep}{1.5pt}\colorbox{phgrey}{\tiny\color{phtext}PLACEHOLDER}}}
+% \placeholderfig{width}{height}{description}: grey figure box
+\newcommand{\placeholderfig}[3]{%
+  \begin{tikzpicture}
+    \node[draw=phtext,dashed,fill=phgrey,minimum width=#1,minimum height=#2,
+          align=center,text width=#1-6mm,font=\footnotesize\color{phtext}]
+      {\textbf{PLACEHOLDER FIGURE}\\[2pt]#3};
+  \end{tikzpicture}}
+% \todo{text}: orange TODO note
+\newcommand{\todo}[1]{{\color{todocol}\textbf{TODO:} #1}}
+% \synfig{width-or-height-spec}{file}: synthetic demo screenshot + visible caption
+\newcommand{\synfig}[2]{%
+  \begin{minipage}[t]{\linewidth}\centering
+    \includegraphics[#1]{figures/#2}\\[-1pt]
+    {\tiny\color{synred}\textbf{SYNTHETIC DEMO DATA, not real results}}
+  \end{minipage}}
+
+\title{Suppressed or Removed?}
+\subtitle{Multilingual machine unlearning in Cohere Tiny Aya Global (3.35B)}
+\author{Mackenzie}
+\institute{Lexsi AI Safety Hackathon \textbullet{} Phase 2 \textbullet{} Track 2b: Safety and Alignment}
+\date[November 2026]{November 2026 \hfill {\color{todocol}\scriptsize DRAFT: all results are placeholders}}
+
+\begin{document}
+
+% ======================================================================
+\maketitle
+\note{
+\begin{itemize}
+\item Working title: "Suppressed or Removed?" \todo{confirm final title.}
+\item Solo project for Track 2b (Safety and Alignment).
+\item One-line pitch: inject fictitious facts into Tiny Aya Global, unlearn them with RMU, then test whether they are really gone: across 8 languages, with linear probes, with a relearning test and with interpretability tools.
+\end{itemize}}
+
+% ======================================================================
+\begin{frame}{The problem: does unlearning actually remove knowledge?}
+\small
+\begin{columns}[T]
+\begin{column}{0.52\textwidth}
+\textbf{Why unlearning matters}
+\begin{itemize}
+\item Models can memorise facts that should be removed after training (private, hazardous or outdated information).
+\item Retraining from scratch is rarely practical, so post-hoc \emph{unlearning} methods are used instead.
+\item A model that stops \emph{saying} a fact may still \emph{know} it.
+\end{itemize}
+\end{column}
+\begin{column}{0.44\textwidth}
+\textbf{Why this is hard to check}
+\begin{itemize}
+\item Refusal in English does not guarantee refusal in other languages.
+\item The fact may still be decodable from hidden states.
+\item A little fine-tuning may bring it back.
+\end{itemize}
+\end{column}
+\end{columns}
+\begin{alertblock}{This project}
+Measure the gap between \textbf{suppression} (output stops) and \textbf{removal} (knowledge gone) for RMU on a multilingual 3.35B model.
+\end{alertblock}
+\note{
+\begin{itemize}
+\item Motivation is general; no specific incidents or numbers are claimed on this slide.
+\item Key distinction for the talk: suppression (the model no longer outputs the fact) versus removal (the fact is no longer recoverable).
+\item Three ways a "forgotten" fact could survive: other languages, hidden-state probes, relearning.
+\item \todo{add one or two cited references on unlearning evaluation if wanted (verify every citation).}
+\end{itemize}}
+\end{frame}
+
+% ======================================================================
+\begin{frame}{Research questions}
+\begin{enumerate}
+\item[\textbf{RQ1}] \textbf{Forgetting vs.\ utility.} Does RMU at layers 16--18 suppress injected facts (forget set) while preserving the retain set?
+\item[\textbf{RQ2}] \textbf{Suppression vs.\ removal.} After RMU, are the facts still linearly decodable, and do they come back quickly under relearning?
+\item[\textbf{RQ3}] \textbf{Multilingual leakage.} Do forgotten facts leak when the forget questions are asked in es, fr, de, hi, ar, zh, sw, ja?
+\item[\textbf{RQ4}] \textbf{Mechanism.} Where in the network does RMU act? (logit lens, token\,$\times$\,layer maps, head ablation, activation differences, EAP-IG circuits)
+\item[\textbf{RQ5}] \textbf{Measurement reliability.} How far do two LLM judges agree on the grades?
+\item[\textbf{RQ6}] \textbf{Generality.} Do the findings hold across seeds and other Tiny Aya variants?
+\end{enumerate}
+\note{
+\begin{itemize}
+\item RQ1 is the standard unlearning trade-off; headline metric is forget\_suppression.
+\item RQ2 and RQ3 are the core contribution: suppression vs removal, and multilingual leakage.
+\item RQ4: interpretability to locate the effect; RMU edits layers 16--18.
+\item RQ5: primary judge Qwen3.5 35B (run locally); Kimi K3 re-grades 15\% of items; report agreement and Cohen's kappa.
+\item RQ6: overnight runs add seed repeats and Tiny Aya Earth, Fire, Water.
+\end{itemize}}
+\end{frame}
+
+% ======================================================================
+\begin{frame}{Pipeline}
+\centering
+\begin{tikzpicture}[
+  st/.style={draw=stage,fill=stage!6,rounded corners=3pt,thick,align=center,
+             minimum width=2.8cm,minimum height=1.1cm,font=\scriptsize},
+  ar/.style={-{Latex[length=2.2mm]},thick,color=stage},
+  tg/.style={rounded corners=2pt,font=\tiny\bfseries,text=white,inner sep=2pt,
+             minimum height=0.36cm,text width=2.7cm,anchor=north,align=center},
+  lg/.style={rounded corners=1.5pt,minimum width=0.32cm,minimum height=0.24cm,inner sep=0pt}]
+  % row 1
+  \node[st] (inj) at (0,0)      {\textbf{1. Inject (LoRA)}\\TOFU fictitious\\author facts};
+  \node[st] (ver) at (3.35,0)   {\textbf{2. Verify}\\facts were\\learned};
+  \node[st] (rmu) at (6.7,0)    {\textbf{3. RMU}\\unlearning at\\layers 16--18};
+  \node[st] (ev)  at (10.05,0)  {\textbf{4. Evaluate}\\forget / retain\\(forget\_suppression)};
+  \node[tg,fill=stdcol] (tinj) at (inj.south) {standard: HF PEFT + Trainer};
+  \node[tg,fill=stdcol] (tver) at (ver.south) {custom};
+  \node[tg,fill=safecol] (trmu) at (rmu.south) {SafeTune};
+  \node[tg,fill=auditcol] (tev) at (ev.south) {AuditKIT};
+  % row 2 (right to left)
+  \node[st] (ml)  at (10.05,-2.3) {\textbf{5. Multilingual eval}\\forget Qs in 8 langs\\es fr de hi ar zh sw ja};
+  \node[st] (pr)  at (6.7,-2.3)   {\textbf{6. Linear probes}\\still decodable?};
+  \node[st] (rl)  at (3.35,-2.3)  {\textbf{7. Relearning}\\suppressed vs.\\removed};
+  \node[st] (int) at (0,-2.3)     {\textbf{8. Interpretability}\\logit lens, maps, ablation,\\PCA; EAP-IG circuits};
+  \node[tg,fill=auditcol] (tml) at (ml.south) {AuditKIT};
+  \node[tg,fill=stdcol] (tpr) at (pr.south) {custom};
+  \node[tg,fill=stdcol] (trl) at (rl.south) {standard: HF Trainer};
+  \node[tg,fill=stdcol,text width=1.28cm,anchor=north west] (tint1) at (int.south west) {custom};
+  \node[tg,fill=circcol,text width=1.28cm,anchor=north east] (tint2) at (int.south east) {CircuitKIT};
+  % arrows
+  \draw[ar] (inj) -- (ver); \draw[ar] (ver) -- (rmu); \draw[ar] (rmu) -- (ev);
+  \draw[ar] (tev.south) -- (ml.north); \draw[ar] (ml) -- (pr); \draw[ar] (pr) -- (rl); \draw[ar] (rl) -- (int);
+  % legend
+  \begin{scope}[shift={(-1.0,-3.75)},font=\scriptsize]
+    \node[lg,fill=safecol] (l1) at (0,0) {}; \node[anchor=west] at (l1.east) {SafeTune};
+    \node[lg,fill=auditcol] (l2) at (2.0,0) {}; \node[anchor=west] at (l2.east) {AuditKIT};
+    \node[lg,fill=circcol] (l3) at (4.0,0) {}; \node[anchor=west] at (l3.east) {CircuitKIT (EAP-IG)};
+    \node[lg,fill=stdcol] (l4) at (7.15,0) {}; \node[anchor=west] at (l4.east) {custom or standard (HF PEFT, Trainer)};
+  \end{scope}
+  \node[font=\scriptsize,align=center] at (5.025,-4.3)
+    {Grading: Qwen3.5 35B primary judge; Kimi K3 re-grades 15\% (agreement, Cohen's $\kappa$).};
+\end{tikzpicture}
+\note{
+\begin{itemize}
+\item Walk the pipeline left to right, then the bottom row right to left. Colour tags show which tool does each stage.
+\item 1: fictitious TOFU author facts are injected with LoRA using standard tooling (Hugging Face PEFT + Transformers Trainer).
+\item 2: a custom check confirms the facts were learned before unlearning.
+\item 3: RMU unlearning at layers 16--18, done with Lexsi's SafeTune.
+\item 4--5: evaluation on forget and retain sets (headline metric forget\_suppression) and the 8-language multilingual evaluation, both with Lexsi's AuditKIT.
+\item 6: custom linear probes test whether the facts are still decodable.
+\item 7: relearning test with standard tooling (Transformers Trainer) separates suppressed from removed knowledge.
+\item 8: logit lens, token x layer maps, head ablation, activation-difference histograms and PCA are custom code; EAP-IG circuits come from Lexsi's CircuitKIT.
+\item Lexsi toolkits chained: SafeTune (unlearn) to AuditKIT (evaluate) to CircuitKIT (circuits).
+\end{itemize}}
+\end{frame}
+
+% ======================================================================
+\begin{frame}{Experimental setup}
+\footnotesize
+\begin{columns}[T]
+\begin{column}{0.31\textwidth}
+\scriptsize
+\textbf{Model and data}
+\begin{itemize}
+\item Cohere Tiny Aya Global (3.35B)
+\item TOFU fictitious author facts\\
+  forget: \placeholder{n}\\ retain: \placeholder{n}
+\item Forget Qs in 8 languages; translation: \placeholder{method}
+\end{itemize}
+\textbf{Judges}
+\begin{itemize}
+\item Primary: Qwen3.5 35B (run locally)
+\item Second: Kimi K3 re-grades 15\%
+\end{itemize}
+\end{column}
+\begin{column}{0.29\textwidth}
+\scriptsize
+\textbf{Tooling per stage}
+\begin{itemize}
+\item {\color{safecol}\textbf{SafeTune}}: RMU unlearning
+\item {\color{auditcol}\textbf{AuditKIT}}: forget/retain and multilingual eval
+\item {\color{circcol}\textbf{CircuitKIT}}: EAP-IG circuits
+\item Standard: HF PEFT + Transformers Trainer (LoRA inject); Trainer (relearning)
+\item Custom: verify check, linear probes, logit lens, maps, ablation, PCA
+\end{itemize}
+\end{column}
+\begin{column}{0.36\textwidth}
+\textbf{Hyperparameters}\\[2pt]
+\scriptsize
+\setlength{\tabcolsep}{3pt}
+\begin{tabular}{@{}ll@{}}
+\toprule
+LoRA rank / alpha & \phcell \\
+LoRA lr / epochs & \phcell \\
+RMU layers & 16--18 \\
+RMU steering coeff. & \phcell \\
+RMU retain weight & \phcell \\
+RMU steps / lr & \phcell \\
+Probe type / layers & linear / \phcell \\
+Relearning steps & \phcell \\
+Seeds & \phcell \\
+\bottomrule
+\end{tabular}
+\end{column}
+\end{columns}
+\note{
+\begin{itemize}
+\item Model: Cohere Tiny Aya Global, 3.35B parameters.
+\item Data: fictitious TOFU author facts, so the base model cannot already know them.
+\item Tooling: SafeTune for RMU, AuditKIT for forget/retain and multilingual evaluation, CircuitKIT for EAP-IG circuits; LoRA injection uses Hugging Face PEFT + Transformers Trainer, relearning uses Transformers Trainer; the verify check, probes and the other interpretability views are custom code.
+\item RMU layers 16--18 are fixed; all other hyperparameters are \todo{fill from the real config.}
+\item \todo{state forget/retain set sizes and how the 8-language questions were produced.}
+\item Judges: Qwen3.5 35B primary; Kimi K3 re-grades 15\% for agreement and Cohen's kappa.
+\end{itemize}}
+\end{frame}
+
+% ======================================================================
+\begin{frame}{Results: forgetting vs.\ retention (RQ1)}
+\begin{columns}[T]
+\begin{column}{0.47\textwidth}
+\scriptsize
+\setlength{\tabcolsep}{3pt}
+\begin{tabular}{@{}lccc@{}}
+\toprule
+Checkpoint & Forget & Retain & Suppr. \\
+\midrule
+Base & \phcell & \phcell & \phcell \\
++ LoRA inject & \phcell & \phcell & \phcell \\
++ RMU L16--18 & \phcell & \phcell & \phcell \\
+\bottomrule
+\end{tabular}\\[6pt]
+\small
+\begin{itemize}
+\item Injection check: \placeholder{verified?}
+\item Headline forget\_suppression:\\ \placeholder{value $\pm$ CI}
+\item Retain change: \placeholder{delta}
+\end{itemize}
+\end{column}
+\begin{column}{0.51\textwidth}
+\synfig{width=\linewidth}{syn-scoreboard-forget.png}
+\end{column}
+\end{columns}
+\note{
+\begin{itemize}
+\item Table rows: base model, after LoRA injection, after RMU.
+\item Evaluation on forget and retain sets runs through Lexsi's AuditKIT. Headline metric: forget\_suppression. \todo{insert real values on Nov 13; define the metric in one sentence.}
+\item The screenshot is the evaluation dashboard with SYNTHETIC demo data, shown only as a layout preview. \todo{replace with real dashboard view or a clean chart.}
+\end{itemize}}
+\end{frame}
+
+% ======================================================================
+\begin{frame}{Results: multilingual leakage (RQ3)}
+\begin{columns}[T]
+\begin{column}{0.55\textwidth}
+\centering
+\begin{tikzpicture}
+  \def\langs{en,es,fr,de,hi,ar,zh,sw,ja}
+  \draw[thick,phtext] (0,0) -- (7.2,0); \draw[thick,phtext] (0,0) -- (0,4.1);
+  \foreach \l [count=\i] in \langs {
+     \node[font=\scriptsize,below] at (\i*0.76,0) {\l};
+     \draw[phtext!60,dashed] (\i*0.76-0.24,0) rectangle (\i*0.76+0.24,3.4);
+  }
+  \node[rotate=90,font=\scriptsize,phtext] at (-0.35,2.0) {forget\_suppression};
+  \node[fill=phgrey,draw=phtext,font=\footnotesize\color{phtext},align=center] at (3.6,2.0)
+     {\textbf{PLACEHOLDER CHART}\\per-language forget\_suppression\\(pre vs.\ post RMU)};
+\end{tikzpicture}\\
+{\tiny\color{todocol}TODO: confirm whether an English baseline column belongs here.}
+\end{column}
+\begin{column}{0.43\textwidth}
+\scriptsize
+\begin{tabular}{@{}lcc@{}}
+\toprule
+Lang. & Pre RMU & Post RMU \\
+\midrule
+es & \phcell & \phcell \\
+fr & \phcell & \phcell \\
+de & \phcell & \phcell \\
+hi & \phcell & \phcell \\
+ar & \phcell & \phcell \\
+zh & \phcell & \phcell \\
+sw & \phcell & \phcell \\
+ja & \phcell & \phcell \\
+\bottomrule
+\end{tabular}
+\end{column}
+\end{columns}
+\note{
+\begin{itemize}
+\item The same forget questions are asked in 8 languages: Spanish, French, German, Hindi, Arabic, Chinese, Swahili, Japanese; the multilingual evaluation runs through AuditKIT.
+\item Question: does unlearning transfer across languages, or do facts leak in some languages?
+\item \todo{insert per-language results; point out the language with the most leakage, if any.}
+\item \todo{decide whether the English/source-language row is shown as a reference.}
+\end{itemize}}
+\end{frame}
+
+% ======================================================================
+\begin{frame}{Results: are the facts still decodable? (RQ2a)}
+\begin{columns}[T]
+\begin{column}{0.56\textwidth}
+\centering
+\placeholderfig{8.2cm}{4.6cm}{Linear-probe accuracy by layer\\pre vs.\ post RMU (layers 16--18 highlighted)}
+\end{column}
+\begin{column}{0.42\textwidth}
+\small
+\textbf{Method}
+\begin{itemize}
+\item Train linear probes on hidden states to decode the injected facts.
+\item Compare before and after RMU.
+\end{itemize}
+\textbf{Finding}
+\begin{itemize}
+\item \todo{probe accuracy post RMU: \placeholder{value}}
+\item \todo{interpretation: suppressed or removed?}
+\end{itemize}
+\end{column}
+\end{columns}
+\note{
+\begin{itemize}
+\item Custom linear probes test whether the facts are still decodable from internal representations after RMU.
+\item High probe accuracy after RMU would mean the fact is suppressed at output, not removed.
+\item \todo{fill in probe setup details (which layers, what target) and results.}
+\end{itemize}}
+\end{frame}
+
+% ======================================================================
+\begin{frame}{Results: relearning test (RQ2b)}
+\begin{columns}[T]
+\begin{column}{0.56\textwidth}
+\centering
+\placeholderfig{8.2cm}{4.6cm}{Forget-set score vs.\ relearning steps\\RMU model vs.\ comparison model (TODO: define)}
+\end{column}
+\begin{column}{0.42\textwidth}
+\small
+\textbf{Idea}
+\begin{itemize}
+\item Briefly fine-tune the unlearned model on the forget facts.
+\item Fast recovery suggests the knowledge was \emph{suppressed}; slow recovery suggests it was \emph{removed}.
+\end{itemize}
+\textbf{Finding}
+\begin{itemize}
+\item \todo{steps to recover: \placeholder{value}}
+\end{itemize}
+\end{column}
+\end{columns}
+\note{
+\begin{itemize}
+\item The relearning test (standard Transformers Trainer fine-tuning) distinguishes suppressed from truly removed knowledge.
+\item \todo{describe the exact relearning protocol and the comparison condition.}
+\item \todo{insert recovery curve and the key number.}
+\end{itemize}}
+\end{frame}
+
+% ======================================================================
+\begin{frame}{Interpretability: where does RMU act? (RQ4)}
+\centering
+\begin{minipage}[t]{0.48\textwidth}\centering
+\scriptsize\textbf{Token $\times$ layer residual norm (pre / post)}\\
+\synfig{height=2.05cm}{syn-token-layer-map.png}
+\end{minipage}\hfill
+\begin{minipage}[t]{0.48\textwidth}\centering
+\scriptsize\textbf{Head ablation importance (pre / post)}\\
+\synfig{height=2.05cm}{syn-head-ablation.png}
+\end{minipage}\\[9pt]
+\begin{minipage}[t]{0.48\textwidth}\centering
+\scriptsize\textbf{Activation-difference histogram, L18}\\
+\synfig{height=2.05cm}{syn-act-diff-hist.png}
+\end{minipage}\hfill
+\begin{minipage}[t]{0.48\textwidth}\centering
+\scriptsize\textbf{PCA of last-token residuals, L18}\\
+\synfig{height=2.05cm}{syn-pca-scatter.png}
+\end{minipage}
+\note{
+\begin{itemize}
+\item Four custom interpretability views planned: token x layer maps, attention-head ablation, activation-difference histograms (forget vs retain prompts) and PCA of residuals.
+\item Logit lens is also part of the analysis. \todo{add a logit-lens panel or mention the finding.}
+\item ALL FOUR PANELS ARE SYNTHETIC DEMO DATA from the dashboard mock-up. \todo{replace with real artifacts and state one finding per panel.}
+\end{itemize}}
+\end{frame}
+
+% ======================================================================
+\begin{frame}{Interpretability: CircuitKIT EAP-IG circuits (RQ4)}
+\begin{columns}[T]
+\begin{column}{0.60\textwidth}
+\synfig{width=\linewidth}{syn-circuit-graph.png}
+\end{column}
+\begin{column}{0.38\textwidth}
+\small
+\begin{itemize}
+\item EAP-IG circuit discovery with Lexsi's CircuitKIT.
+\item Compare circuits for forget-set prompts before and after RMU.
+\item Top nodes: \placeholder{list}
+\item Overlap with layers 16--18: \placeholder{value}
+\item \todo{one-sentence takeaway}
+\end{itemize}
+\end{column}
+\end{columns}
+\note{
+\begin{itemize}
+\item Circuits computed with CircuitKIT's EAP-IG method from Lexsi's toolkit.
+\item The graph shown is SYNTHETIC demo data. \todo{replace with the real circuit and name the key nodes.}
+\item \todo{say whether the circuit components that change concentrate around layers 16--18.}
+\end{itemize}}
+\end{frame}
+
+% ======================================================================
+\begin{frame}{Judge reliability (RQ5)}
+\begin{columns}[T]
+\begin{column}{0.45\textwidth}
+\small
+\begin{itemize}
+\item Primary judge: Qwen3.5 35B grades all items.
+\item Kimi K3 independently re-grades a 15\% sample.
+\end{itemize}
+\vspace{4pt}
+\footnotesize
+\begin{tabular}{@{}lc@{}}
+\toprule
+Statistic & Value \\
+\midrule
+Items re-graded (15\%) & \phcell \\
+Raw agreement & \phcell \\
+Cohen's $\kappa$ & \phcell \\
+Disagreements reviewed & \phcell \\
+\bottomrule
+\end{tabular}
+\end{column}
+\begin{column}{0.53\textwidth}
+\synfig{width=\linewidth}{syn-scoreboard-judge.png}
+\end{column}
+\end{columns}
+\note{
+\begin{itemize}
+\item LLM judges can be wrong, so a second judge re-grades 15\% of items.
+\item Report raw agreement and Cohen's kappa between Qwen3.5 35B and Kimi K3.
+\item \todo{insert numbers; describe how disagreements were handled.}
+\item Screenshot on the right is SYNTHETIC demo data.
+\end{itemize}}
+\end{frame}
+
+% ======================================================================
+\begin{frame}{Cross-model and seed comparison (RQ6)}
+\centering
+\footnotesize
+\setlength{\tabcolsep}{4pt}
+\begin{tabular}{@{}lccccc@{}}
+\toprule
+Tiny Aya variant & Seeds & forget\_supp. (mean $\pm$ sd) & Retain & Multilingual leak & Relearning \\
+\midrule
+Global & \phcell & \phcell & \phcell & \phcell & \phcell \\
+Earth  & \phcell & \phcell & \phcell & \phcell & \phcell \\
+Fire   & \phcell & \phcell & \phcell & \phcell & \phcell \\
+Water  & \phcell & \phcell & \phcell & \phcell & \phcell \\
+\bottomrule
+\end{tabular}\\[10pt]
+\placeholderfig{9cm}{2.3cm}{Seed spread of forget\_suppression per variant}\\[4pt]
+{\scriptsize\todo{depends on overnight runs; drop columns that were not run.}}
+\note{
+\begin{itemize}
+\item Overnight runs add seed repeats and other Tiny Aya variants (Earth, Fire, Water) for cross-model comparison.
+\item \todo{confirm which variants and how many seeds actually finished; same RMU layers or re-tuned per model?}
+\end{itemize}}
+\end{frame}
+
+% ======================================================================
+\begin{frame}{Limitations}
+\begin{itemize}
+\item Facts are \textbf{fictitious and injected with LoRA}; knowledge learned in pretraining may behave differently.
+\item \textbf{One unlearning method} (RMU) at \textbf{fixed layers} (16--18).
+\item \textbf{LLM judges} can be wrong; the second judge covers only a 15\% sample.
+\item \textbf{Linear} probes give a lower bound on what is still decodable.
+\item \textbf{8 languages} are a subset of what the model supports.
+\item \todo{add limitations that come out of the real results (e.g.\ seed variance).}
+\end{itemize}
+\note{
+\begin{itemize}
+\item Be upfront: injected fictitious facts are a controlled setting, not a claim about pretraining knowledge.
+\item A negative probe result does not prove removal; non-linear probes could still decode.
+\item \todo{revise once results are in.}
+\end{itemize}}
+\end{frame}
+
+% ======================================================================
+\begin{frame}{What's next}
+\begin{itemize}
+\item Fill in real results (arriving Nov 13) and update every placeholder.
+\item \todo{compare RMU with other unlearning methods.}
+\item \todo{sweep the RMU layer choice instead of fixing 16--18.}
+\item \todo{extend multilingual tests to more languages / scripts.}
+\item \todo{non-linear probes as a stronger removal test.}
+\item \todo{pick the 1--2 items the results most strongly motivate.}
+\end{itemize}
+\note{
+\begin{itemize}
+\item All items here are candidate next steps; \todo{keep only those motivated by the actual findings.}
+\end{itemize}}
+\end{frame}
+
+% ======================================================================
+\begin{frame}{Links and resources}
+\begin{itemize}
+\item \textbf{Code (GitHub):} \todo{repository URL}\quad\placeholder{github.com/TODO}
+\item \textbf{Models and datasets (Hugging Face collections):} \todo{collection URL}\quad\placeholder{huggingface.co/collections/TODO}
+\item \textbf{Paper (optional, LaTeX):} \todo{link or attachment}
+\item \textbf{Video:} \todo{link}
+\end{itemize}
+\vspace{8pt}
+\small
+Built with Lexsi's SafeTune, AuditKIT and CircuitKIT.\\
+Data: TOFU fictitious author facts. Model: Cohere Tiny Aya Global.
+\note{
+\begin{itemize}
+\item All URLs are placeholders. \todo{insert real public URLs and check they resolve.}
+\item Thank the organisers. \todo{decide on closing line.}
+\end{itemize}}
+\end{frame}
+
+\end{document}

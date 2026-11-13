@@ -1,0 +1,69 @@
+# Secrets and local env
+.env
+.env.*
+!.env.example
+.env.local
+*.pem
+*.key
+
+# Local prepublish identity list (real usernames / hostnames)
+.prepublish_identities
+
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+.venv/
+venv/
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+
+# Notebooks / OS
+.ipynb_checkpoints/
+.DS_Store
+
+# Model weights, caches, run outputs (train on Colab, not this Mac)
+artifacts/
+logs/
+traces/
+outputs/
+checkpoints/
+wandb/
+lightning_logs/
+hf_cache/
+.cache/
+*.bin
+*.pt
+*.pth
+*.ckpt
+*.safetensors
+*.gguf
+
+# Editor
+.idea/
+.vscode/
+
+# Translation backups created by --force
+data/translations.*.bak.json
+
+# LaTeX / slide build products (paper and presentation, once they exist)
+paper/_build/
+paper/*.aux
+paper/*.log
+paper/*.out
+paper/*.toc
+paper/*.fls
+paper/*.fdb_latexmk
+paper/*.synctex.gz
+presentation/_build/
+presentation/*.aux
+presentation/*.log
+presentation/*.out
+presentation/*.toc
+presentation/*.nav
+presentation/*.snm
+presentation/*.vrb
+presentation/*.fls
+presentation/*.fdb_latexmk
+presentation/*.synctex.gz

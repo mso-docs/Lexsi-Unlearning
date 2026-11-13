@@ -1,0 +1,137 @@
+# Colab / small-GPU profile for Lexsi Track 2b: unlearning vs hiding.
+# Used when RUN_PROFILE=colab or --config configs/default.yaml.
+# The DGX Spark profile lives in configs/spark.yaml.
+# Edit copies rather than overwriting this file mid-run.
+
+profile: colab
+
+model:
+  id: CohereLabs/tiny-aya-global
+  # 36 decoder layers, d_model 2048 (CircuitKIT Tiny Aya docs:
+  # https://circuitkit.lexsi.ai/advanced/tiny-aya/).
+  n_layers: 36
+  # CC-BY-NC 4.0 + Cohere Labs Acceptable Use Policy. Gated on Hugging Face.
+  license: CC-BY-NC-4.0
+  dtype: bfloat16
+  # Chat loading. Confirm with the model card if the Auto class changes:
+  # https://huggingface.co/CohereLabs/tiny-aya-global
+  trust_remote_code: false
+
+tofu:
+  # Official dataset: https://huggingface.co/datasets/locuslab/TOFU (MIT, ungated)
+  repo_id: locuslab/TOFU
+  # Start with forget01. Only move to forget05 if injection quality is clearly high.
+  forget_split: forget01
+  retain_split: retain99
+  # Official perturbed split for paraphrase-style eval (same dataset, if present).
+  forget_perturbed_split: forget01_perturbed
+  world_facts_split: world_facts
+  real_authors_split: real_authors
+  # Optional paraphrase set: https://huggingface.co/datasets/sungjuncho/TOFU-para
+  para_repo_id: sungjuncho/TOFU-para
+
+injection:
+  # LoRA SFT on a compact slice that includes forget authors plus retain examples.
+  # Run on Colab, not this Mac. Use configs/spark.yaml for the DGX Spark.
+  method: lora
+  max_forget_examples: null  # null = use the full forget split
+  max_retain_examples: 200   # keep weekend-sized; raise if retain accuracy suffers
+  epochs: 3
+  learning_rate: 2.0e-4
+  batch_size: 2
+  grad_accum: 8
+  max_seq_len: 512
+  lora:
+    r: 16
+    lora_alpha: 32
+    lora_dropout: 0.05
+    bias: "none"
+    task_type: CAUSAL_LM
+    # Verified 2026-11-12 from CohereLabs/tiny-aya-global weight index
+    # (Cohere2ForCausalLM): self_attn.{q,k,v,o}_proj and mlp.{gate,up,down}_proj.
+    target_modules:
+      - q_proj
+      - k_proj
+      - v_proj
+      - o_proj
+      - gate_proj
+      - up_proj
+      - down_proj
+
+rmu:
+  # SafeTune RMUTrainer defaults from
+  # https://safetune.lexsi.ai/user-guide/unlearn/rmu/
+  # layer_id=7 is the library default (mid-early). FLAG: retune for 36-layer Tiny Aya.
+  # layer_id=7 is the safetune 0.1.18 default. Still retune for 36-layer Tiny Aya.
+  layer_id: 7  # TODO: retune on 36-layer Tiny Aya; record the layers actually used
+  # Defaults when layer_id is 7. If you change layer_id, update this list to match
+  # the trainer (typically a short window of MLP down_proj layers around layer_id).
+  update_layers: [5, 6, 7]
+  # Trainer kwarg name (safetune 0.1.18); alias of update_layers.
+  update_layer_ids: [5, 6, 7]
+  alpha: 1200.0
+  steering_coeff: 20.0
+  lr: 5.0e-5
+  max_num_batches: 80
+
+npo:
+  # Optional comparison. SafeTune NPOTrainer:
+  # https://safetune.lexsi.ai/user-guide/unlearn/npo/
+  # variant is "npo_grad_diff" or "npo_KL" in the docs. Confirm the exact kwarg
+  # name in the installed package before calling.
+  enabled: false
+  variant: npo_grad_diff
+
+eval:
+  max_new_tokens: 64
+  # Languages for a small constructed translation set (TOFU itself is English-only).
+  # Filled into data/translations.json by `run_pipeline.py --stage translate` (needs a reachable
+  # Ollama helper). If the file is missing the translation eval is skipped.
+  translation_languages: [es, fr, de, hi, ar, zh, sw, ja]
+  # Two-tier helper judge (not the Cohere core model), ON by default. On Colab the Ollama default
+  # only works if you point OLLAMA_BASE_URL at a reachable host; when it is not reachable the judge
+  # gives up after a few failed calls and the run continues without judge verdicts.
+  utility: true
+  utility_max_examples: 40
+  use_judge: true
+  judge_max_consecutive_failures: 4
+  judge_backend: ${JUDGE_BACKEND:-ollama}
+  ollama_base_url: ${OLLAMA_BASE_URL:-http://127.0.0.1:11434/v1}
+  judge_model: ${JUDGE_MODEL:-qwen3.5:35b}
+  # Leave blank until you pick a slug from https://openrouter.ai/models.
+  secondary_judge_model: ${SECONDARY_JUDGE_MODEL:-}
+  secondary_judge_fraction: ${SECONDARY_JUDGE_FRACTION:-0.15}
+  judge_seed: 20261112
+  judge_reasoning_effort: "none"
+
+translate:
+  languages: []
+  include_paraphrase: true
+  output: data/translations.json
+  review_file: translations_review.md
+
+paths:
+  artifacts_dir: ${OUTPUT_DIR:-artifacts}
+  inject_adapter_dir: ${OUTPUT_DIR:-artifacts}/inject_lora
+  unlearned_dir: ${OUTPUT_DIR:-artifacts}/rmu_unlearned
+
+# Short end-to-end check. Not part of --stage all.
+smoke:
+  n_forget: 5
+  n_retain: 8
+  rmu_max_num_batches: 5
+  max_new_tokens: 32
+  batch_size: 1
+
+probes:
+  n_splits: 5
+  test_frac: 0.3
+  seed: 0
+  content_probe: true
+
+relearn:
+  steps: 30
+  learning_rate: 2.0e-4
+  n_facts: 8
+  eval_steps: [0, 5, 10, 20, 30]
+  judge_all_steps: false

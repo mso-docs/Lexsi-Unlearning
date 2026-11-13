@@ -1,0 +1,26 @@
+{
+  "_comment": "Shape of data/translations.json. Normally written by `python scripts/run_pipeline.py --stage translate` (machine translations from the helper model, flagged needs_human_review; spot-check artifacts/translations_review.md). You can also fill it by hand. Row ids match the TOFU forget01 row index. TOFU is English-only; Tiny Aya is multilingual, so this is for RQ1 robustness checks. Mark these prompts as created during the event.",
+  "items": [
+    {
+      "id": "example-forget-id",
+      "source_question": "Example English question from TOFU forget01",
+      "source_answer": "Example English answer",
+      "translations": {
+        "es": {
+          "question": "",
+          "answer": "",
+          "translator_model": "",
+          "translated_at": "",
+          "needs_human_review": true
+        },
+        "fr": {
+          "question": "",
+          "answer": "",
+          "translator_model": "",
+          "translated_at": "",
+          "needs_human_review": true
+        }
+      }
+    }
+  ]
+}

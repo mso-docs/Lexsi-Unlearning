@@ -1,0 +1,331 @@
+% DRAFT SKELETON -- every coloured placeholder must be replaced. No number in this file is a measured result.
+% Method text follows the pipeline code; remaining CHECK items are not code facts.
+% Set \showplaceholdersfalse once filled in: every leftover placeholder then prints ?? so it is easy to find.
+\documentclass[10pt,twocolumn]{article}
+\usepackage[margin=0.8in,columnsep=0.28in]{geometry}
+\usepackage[T1]{fontenc}
+\usepackage{lmodern}
+\usepackage{microtype}
+\usepackage{booktabs}
+\usepackage{graphicx}
+\usepackage{amsmath,amssymb}
+\usepackage[dvipsnames]{xcolor}
+\usepackage{enumitem}
+\usepackage[hidelinks]{hyperref}
+\usepackage{url}
+\usepackage[font=small,labelfont=bf]{caption}
+\emergencystretch=3em
+\setlist{leftmargin=*,itemsep=1pt,topsep=2pt,parsep=0pt}
+\setlength{\parskip}{0pt}
+
+% ---------- Placeholder macros ----------
+\newif\ifshowplaceholders \showplaceholderstrue
+\ifshowplaceholders
+  \newcommand{\res}[1][]{\textcolor{BrickRed}{\textbf{[RESULT\if\relax\detokenize{#1}\relax\else: #1\fi]}}}
+  \newcommand{\rs}{\textcolor{BrickRed}{\textbf{[RES]}}}
+  \newcommand{\decide}[1]{\textcolor{RoyalBlue}{\textbf{[DECIDE: #1]}}}
+  \newcommand{\chk}[1]{\textcolor{BurntOrange}{\textbf{[CHECK: #1]}}}
+  \newcommand{\writehere}[1]{\textcolor{OliveGreen}{\textbf{[WRITE: #1]}}}
+  \newcommand{\lnk}[1]{\textcolor{Plum}{\textbf{[LINK: #1]}}}
+\else
+  \newcommand{\rs}{??}\newcommand{\res}[1][]{??}\newcommand{\decide}[1]{??}\newcommand{\chk}[1]{??}
+  \newcommand{\writehere}[1]{??}\newcommand{\lnk}[1]{??}
+\fi
+% Grey box for a figure that does not exist yet.
+\newcommand{\figph}[2][1.35in]{%
+  \begin{center}\fbox{\parbox[c][#1][c]{0.92\linewidth}{\centering\textcolor{gray}{\textbf{FIGURE PLACEHOLDER}}\\[3pt]\footnotesize #2}}\end{center}}
+\newcommand{\code}[1]{\texttt{#1}}
+\newcommand{\FS}{\code{forget\_suppression}}
+\newcommand{\FJ}{\code{judge\_forget\_suppression}}
+
+\title{\vspace{-0.6em}Unlearning vs.\ Hiding: Does Unlearning Remove Knowledge\\or Just Suppress Its Expression?\vspace{-0.3em}}
+\author{\decide{author name(s) and affiliation}}
+\date{Lexsi AI Safety and Alignment Hackathon, Track 2b (problem statement 7)}
+
+\begin{document}
+\twocolumn[{%
+\maketitle
+\vspace{-1.2em}
+\begin{center}
+\fbox{\parbox{0.95\textwidth}{\small\textbf{Draft skeleton.} Placeholder key:
+\res{} number from the runs;\ \decide{choice} open decision;\ \chk{item} verify before submitting;\ \writehere{prose} text to write;\ \lnk{url} link.
+Grey boxes are figures that do not exist yet. Method text describes the pipeline code as it stands; items still to confirm against the final run carry a \chk{}.}}
+\end{center}
+\begin{abstract}
+% Submission-form abstract (abstract.md) must stay under 500 words; this version is shorter.
+\noindent Machine unlearning should remove designated knowledge, but a drop in accuracy on direct questions does not show the knowledge is gone. We run one toolkit-chained audit of RMU unlearning on Tiny Aya, a 3.35B multilingual model. We teach Tiny Aya Global fictitious TOFU authors in English with LoRA, merge the adapter, unlearn the facts with RMU at mid-depth layers 16--18 of 36, and repeat the protocol on Tiny Aya Earth, Fire and Water \decide{variant claim is behavioral only, or behavioral plus internal tests, depending on which variant runs finish}. The headline metric is \FJ{}, one minus a judge's factual-match rate (\res[post-injection] to \res[post-RMU] on direct questions), with substring \FS{} secondary; failed judgments count as missing. Forgetting under paraphrased, reformatted, extraction-style and translated prompts in eight languages is \res{}, \res{}, \res{} and \res{}. Held-out layer-wise probes with base-model and shuffled-label controls, a logit lens, activation patching and a per-step relearning curve (RMU model on forgotten facts against RMU model on new facts) give \res[one-sentence finding]. \decide{closing claim: suppression, erasure or mixed.} This is a measurement study, not a new method. Prior work already shows that unlearned knowledge is often recoverable, and a multilingual unlearning study exists~\cite{farashah2026amnesia}; to our knowledge, no unlearning study of Tiny Aya was found.
+\end{abstract}
+\vspace{0.4em}
+}]
+
+% ======================================================
+\section{Introduction}
+\label{sec:intro}
+\writehere{3--5 sentences: unlearning is proposed for privacy, copyright and hazardous-knowledge removal; if it only hides knowledge, a deployer who checks only direct prompts gets false assurance. Cite prior shallow-unlearning work as motivation, not as our finding.}
+
+We study one pipeline end to end. We teach a small multilingual model facts it cannot know from pretraining, unlearn them with RMU~\cite{li2024wmdp}, and ask three questions.
+\begin{enumerate}[label=\textbf{RQ\arabic*.}]
+  \item \emph{How complete is behavioral forgetting?} How far does a judge-based forget metric fall under direct, paraphrased, reformatted, extraction-style and translated questions (eight languages), and does retain and general utility hold?
+  \item \emph{Is the knowledge still internally recoverable?} Do held-out layer-wise probes, a logit lens, or activation patching from the pre-unlearning model still find the facts, and does relearning bring them back faster than new facts are learned under the same schedule?
+  \item \emph{Do the answers differ across Tiny Aya variants and RMU layers?}
+\end{enumerate}
+
+\paragraph{Why the resulting model is meaningfully better for usage.}
+% Required by the Lexsi write-up rules; judges look for this explicitly. Keep to one of the two options.
+\decide{(a) if a targeted re-run was done: ``re-targeting RMU at layers \res{} lowers probe recoverability from \res{} to \res{} at a retain-set cost of \res{}''; (b) audit only: ``the audit tells a deployer whether an unlearned checkpoint can be trusted and which tests it must pass before it is called unlearned, and it reports the model's measured residual leakage''. Pick one and state it plainly.}
+
+\paragraph{Contributions.} This is a measurement study; we propose no new unlearning method and do not claim that unlearning can be shallow (Section~\ref{sec:related}). In order of importance:
+(i) \emph{Cross-variant comparison.} Tiny Aya Global~\cite{salamanca2026tinyaya} against its Earth, Fire and Water variants under one unlearning protocol. To our knowledge no earlier unlearning work on Tiny Aya exists \chk{repeat the literature search before submitting}. The queued Earth, Fire and Water runs include held-out probes, relearning and the interpretability extras, but CircuitKIT circuit discovery runs on Global only. \decide{claim scope: (a) behavioral comparison only, if too few variant runs finish with interpretability; or (b) behavioral plus internal tests (probes, logit lens, patching, relearning), if they do. Circuit results stay Global-only either way.}
+(ii) \emph{Multilingual leakage paired with internal tests.} Eight-language queries are scored behaviorally and next to probes, logit lens, patching and relearning. This is a follow-up to Farashah et al.~\cite{farashah2026amnesia}, whose analysis is behavioral, and it differs from the Unlearning Depth Score work~\cite{lee2026uds}: UDS evaluates on TOFU forget10 (Lee et al., Sec.~4.1) and does not test other languages or use linear probes.
+(iii) \emph{Mid-depth RMU and relearning.} RMU at layers 16--18 of 36 instead of the library's early default layers, an RMU layer sweep, and a per-step relearning curve in which the RMU model relearns its forgotten facts and, separately, learns held-out new facts under the same schedule.
+
+% ======================================================
+\section{Related Work}
+\label{sec:related}
+\paragraph{Benchmarks and methods.} TOFU~\cite{maini2024tofu} supplies fictitious author profiles with known ground truth; we use its \code{forget01}, \code{retain99}, \code{world\_facts} and \code{real\_authors} splits. RMU~\cite{li2024wmdp} steers intermediate activations on forget data toward a random vector while anchoring retain activations (we use the method, not the WMDP data). NPO~\cite{zhang2024npo} and Who's Harry Potter~\cite{eldan2023harry} are other unlearning methods; NPO is \decide{not run / a secondary comparison}.
+
+\paragraph{Unlearning often hides rather than removes.} ConceptVectors~\cite{hong2024conceptvectors} finds that existing methods barely change the parameter vectors that encode a concept and mostly suppress them at inference, and that ablating those vectors removes the knowledge. For RMU specifically, fine-tuning on 10 unrelated examples or removing activation directions recovers most hazardous capability~\cite{lucki2024adversarial}. Unlearning changes how knowledge is retrieved, mainly through final-layer MLP coefficients, not what is stored~\cite{hong2024dissecting}. Recovery also works by quantization (an average of 21\% of forgotten knowledge retained in full precision rising to 83\% after 4-bit quantization, for methods with utility constraints)~\cite{zhang2024quantization}; by tampering, where state-of-the-art unlearning is undone within 16 fine-tuning steps~\cite{che2025tampering}; by benign relearning~\cite{hu2024jogging} and activation steering~\cite{seyitoglu2024extracting}; and, for an extraction attack, from hidden states~\cite{patil2023sensitive}. A robust-evaluation suite shows extraction, relearning and latent-knowledge probing on the Who's Harry Potter model~\cite{lynch2024eight}. Distilling an unlearned model into a fresh (randomly initialized or noised) student leaves latent capability behind and makes the unlearning robust to relearning~\cite{lee2025distillation}, and localizing edits to components that implement factual recall resists relearning~\cite{guo2024mechanistic}.
+
+\paragraph{Counterpoint.} Not every result is negative. In a study of eight methods, RMU and TAR resisted straightforward prompt attacks, and logit analysis suggested that unlearned models do not hide knowledge through answer formatting, while ELM was vulnerable~\cite{jang2025prompt}. WMDP itself reports linear probes only slightly above chance after RMU~\cite{li2024wmdp}. A clean result in our setting would be consistent with these findings.
+
+\paragraph{Multilingual unlearning.} Farashah et al.~\cite{farashah2026amnesia} study Aya-Expanse 8B on TOFU translated into ten languages (en, fr, ar, ja, ru, fa, ko, hi, he, id) with a 1\% forget set, unlearning in each source language and measuring transfer to the others with GradDiff, GradDiff-KL and NPO. They report behavioral metrics (answer probability, Truth Ratio, utility, perplexity), find that forgetting stays mostly in the unlearning language with limited, asymmetric transfer, and find that syntactic distance best predicts transfer. Cross-lingual unlearning has also been studied as an adaptive-weighting method~\cite{choi2024crosslingual}, and in multilingual models fine-tuned on parallel data a model may answer in the wrong language after unlearning, which breaks reference-based metrics~\cite{hwang2025englishonly}. Our test is a follow-up, not a new idea, and differs in four ways: RMU rather than gradient-based objectives; Tiny Aya Global (3.35B) and its regional variants; facts injected in English only, so the question is whether English-only unlearning of English-injected facts leaks in other languages, rather than unlearning within each language; and internal recoverability and relearning next to behavioral scores, with eight languages that include sw, hi and ar.
+
+\paragraph{Measuring depth.} Layer-wise activation patching as a depth score for unlearning, with a logit lens as comparison, is the Unlearning Depth Score~\cite{lee2026uds}; we use patching and the logit lens as established tools~\cite{zhang2023patching,belrose2023tuned} and do not present them as a new way to measure unlearning depth. UDS evaluates on TOFU forget10 (Lee et al., Sec.~4.1) and does not test other languages or use linear probes~\cite{lee2026uds}. We also use linear probes~\cite{alain2016probes}, CircuitKIT with EAP-IG~\cite{hanna2024faith,syed2023attribution}, and LoRA~\cite{hu2021lora}.
+
+\paragraph{Caveat on injected facts.} Deeb and Roger~\cite{deeb2024unlearning} recover most pre-unlearning accuracy by fine-tuning on related facts, and note that evaluations on information learned during an additional fine-tuning phase, as our LoRA injection of TOFU facts is, may overestimate how robust unlearning is compared with unlearning pretraining knowledge.
+
+% ======================================================
+\section{Method}
+\label{sec:method}
+The method follows the pipeline code. Items marked \chk{} remain to be confirmed against the final run.
+
+\paragraph{Model.} \code{CohereLabs/tiny-aya-global}~\cite{salamanca2026tinyaya}: an instruction-tuned multilingual (70 languages) model with 3.35B parameters, 36 decoder layers and $d_\text{model}=2048$, in bfloat16 with its chat template. The regional variants Earth, Fire and Water share the architecture. Licence: CC-BY-NC with Cohere's acceptable-use policy.
+
+\paragraph{Data.} TOFU~\cite{maini2024tofu}: \code{forget01} (40 question-answer pairs, two authors) is the forget set and \code{retain99} (3{,}960 pairs) the retain set. Injection and the RMU retain data use only the first 3{,}600 \code{retain99} rows (180 authors), which leaves 18 authors held out for the relearning control. Paraphrases are the official \code{forget01\_perturbed} questions. Retain accuracy is scored on the first 64 retain rows. General capability is measured on TOFU \code{world\_facts} and \code{real\_authors}, 40 items each (20 each in the queued variant and seed jobs), which are never injected or unlearned and are scored before and after RMU.
+
+\paragraph{Fact injection (English only).} Facts are injected in English only: the LoRA~\cite{hu2021lora} fine-tune uses the English TOFU questions and answers, and RMU later uses the English forget and retain sets. Translations are used only to query the model. Post-injection accuracy per language therefore measures how far English-injected facts are reachable in other languages, and is the reference for the leakage numbers. Settings: LoRA on the shuffled union of \code{forget01} and the 3{,}600-row retain slice (loss on answer tokens), rank 16, $\alpha=32$, dropout 0.05, all attention and MLP projections, 3 epochs, learning rate $2\times10^{-4}$, per-device batch 8 with 2 accumulation steps, sequence length 512, bfloat16; the pipeline aborts if forget substring accuracy is below 0.5.
+
+\paragraph{Unlearning with RMU.} SafeTune's \code{RMUTrainer} trains only the MLP output projections of the update layers on
+\begin{equation}
+\mathcal{L}=\operatorname{MSE}\!\big(h^{\ell}_{\text{forget}},\,c\,u\big)+\alpha\,\operatorname{MSE}\!\big(h^{\ell}_{\text{retain}},\,h^{\ell}_{\text{retain,frozen}}\big),
+\end{equation}
+with $h^{\ell}$ the residual activation at the output of steering layer $\ell$, $u$ a fixed random unit vector, $c$ the steering coefficient and the frozen reference a copy of the starting model. Main run: $\ell=18$, update layers $\{16,17,18\}$, $\alpha=1200$, $c=20$, learning rate $5\times10^{-5}$, at most 80 batch pairs. The library default is layer 7 with update layers $\{5,6,7\}$; we move to mid-depth layers because Tiny Aya has 36 layers \decide{state why: sweep result or prior}. The LoRA adapter is merged into the full weights before RMU, and RMU is applied to the merged weights.
+
+\paragraph{Behavioral metrics.} Generations are greedy (up to 64 new tokens). \emph{Headline:} $\FJ{}=1-$ the primary judge's match rate on forget prompts (higher means the answer does not reveal the fact), reported per query format and per language, including the translated prompts. \emph{Secondary:} \code{judge\_retain\_accuracy} on the retain slice and \code{judge\_utility\_accuracy} on \code{world\_facts} and \code{real\_authors} (the judge's match rate), both before and after RMU, and the substring metric $\FS{}=1-\mathbb{1}[a\subseteq y]$ with $a$ the lowercased reference answer and $y$ the lowercased output. A failed judgment is missing, not zero: it is excluded from the rate and counted, and every rate is reported with $n_\text{judged}$ and $n_\text{missing}$. A judge is the headline because reference-based metrics can fail when a model answers in another language or paraphrases~\cite{hwang2025englishonly}. Query formats are \emph{direct}; \emph{paraphrase}; \emph{cloze}; \emph{true/false} (a statement containing the correct answer, target ``True''); \emph{extraction} (``Tell me everything you know about the following topic'' with the TOFU question as topic); and \emph{translation}. Cloze, true/false and extraction prompts were constructed for this study. The base model is scored on direct forget and retain questions with the substring metric only. A drop on direct questions alone is not treated as evidence of unlearning.
+
+\paragraph{Multilingual leakage.}\label{sec:multi} Forget questions and answers are machine-translated into es, fr, de, hi, ar, zh, sw and ja by the local helper model, with failed translations left out and a seeded sample per language written to a review sheet. Each translated question is scored with the same metrics. \decide{state whether a native-speaker or back-translation check was done, on how many items.}
+
+\paragraph{Judging.} The primary judge is \code{qwen3.5:35b} served locally through Ollama (temperature 0, thinking off, JSON verdict with a boolean \code{match}). A secondary judge, \code{moonshotai/kimi-k3} through OpenRouter, re-grades a seeded random 15\% sample of the same cases with the same rubric. We report raw agreement and Cohen's $\kappa$ on the paired verdicts. Judge failures are left missing, never scored as zero. The secondary judge runs only when it is configured, so the agreement table is filled only for runs that used it.
+
+\paragraph{Linear probes with held-out rows.} At each of the 37 residual positions we take the activation at the last non-padding token; indexing is padding-independent and batches are right-padded. A logistic probe (standardized features, balanced classes) separates forget questions (40) from retain questions (the 64 scored retain rows) at the last prompt token. Every probe number is on held-out rows: a seeded, stratified 70/30 train/test split, repeated 5 times (3 in the queued jobs), reported as the held-out mean and standard deviation over splits as accuracy, balanced accuracy and AUROC. We report three curves. \emph{Frozen}: probes fit on the post-injection model and applied, unchanged, to the base, post-injection, post-RMU and post-relearning models. \emph{Refit}: fresh probes fit on each model's own training rows, which asks whether the information is still linearly decodable. \emph{Controls}: the base model before injection (a refit curve showing how separable the two sets are without the facts), and probes fit on shuffled labels (should sit at chance). A \emph{content} probe distinguishes a question followed by its true answer from the same question followed by another forget fact's answer, with both texts of a question kept in the same split. A null probe result would reproduce WMDP's report of probes near chance after RMU~\cite{li2024wmdp}; it is not evidence of erasure without relearning or another recovery control. Forget-versus-retain probes can partly reflect question topic, and the content probe's distractors (other forget answers) may be confounded by topic.
+
+\paragraph{Logit lens, patching, norms.} The logit lens applies the final norm and unembedding to each layer's residual and reports the rank and probability of the first answer token. Activation patching copies the post-injection model's residual into the post-RMU model at one (layer, position) at a time and reports recovery $=(\log p_\text{patched}-\log p_\text{post})/(\log p_\text{pre}-\log p_\text{post})$, undefined where the gap is below 1 nat. Head ablation zeroes one head's slice of the output-projection input and reports the drop in the answer token's log-probability. We also report token-by-layer residual norms, post/pre norm ratios, steering-layer activation-difference histograms and a 2-D PCA (a derived view). CircuitKIT EAP-IG circuit discovery (node level, 32 examples) runs on the post-injection and post-RMU checkpoints with a forget-question clean prompt, a length-matched retain corrupted prompt, and a first-token logit difference; it is exploratory because the task is not a minimal pair and Tiny Aya support is experimental.
+
+\paragraph{Relearning curve.} We fine-tune for 30 steps (learning rate $2\times10^{-4}$, batch size 1, one training run per arm, so the schedule is not restarted between scoring points) and score at steps $\{0,5,10,20,30\}$ ($\{0,10,30\}$ in the queued jobs). There are three arms. \emph{RMU-old}: the post-RMU model trains on 8 forgotten facts. \emph{RMU-new}: a fresh copy of the same post-RMU model trains on 8 new facts, which are fictitious TOFU authors held out from both the forget set and the retain slice (the injected retain slice is capped at 3{,}600 rows to make room for them). \emph{Base-old}: the never-injected base model trains on the same 8 forgotten facts, an acquisition-from-scratch reference rather than a matched control. The two old-fact arms are also scored on held-out paraphrases of those facts from \code{forget01\_perturbed}. The new facts have no paraphrases, so RMU-new is scored on its trained questions only. The suppression-versus-removal comparison is RMU-old against RMU-new on trained questions, where both arms start from the same weights, train under the same schedule and are scored the same way. Faster recovery of the forgotten facts than acquisition of the new facts is read as suppression, not erasure. Substring match is scored at every step; the judge runs only at the first and last step.
+
+\paragraph{Uncertainty.} \decide{state the bootstrap procedure for the 95\% confidence intervals (resampled over forget questions).}
+
+% ======================================================
+\section{Experimental Setup}
+\label{sec:setup}
+\paragraph{Pipeline.} inject $\rightarrow$ verify $\rightarrow$ unlearn $\rightarrow$ eval $\rightarrow$ probes $\rightarrow$ interp $\rightarrow$ relearn, with every query logged under a stable case identifier so before/after scores pair the same questions. Checkpoints compared: original, post-injection, post-RMU \decide{and post-NPO, if run}.
+
+\paragraph{Tiny Aya variants.} The recipe is run on Global, Earth (strongest for African and West Asian languages), Fire (South Asian) and Water (Asia-Pacific and European)~\cite{salamanca2026tinyaya}. The queued variant runs include the probes, relearning and the interpretability extras (token maps, logit-lens table, head ablation, distributions, PCA); CircuitKIT circuit discovery runs on Global only, so circuit results are Global-only. \decide{the overnight queue may be trimmed: state the variant claim as behavioral only, or behavioral plus internal tests, to match which variants finish.} \decide{mention Tiny Aya Base or Aya Expanse 8B only if they ran and are comparable; Base has no chat template.}
+
+\paragraph{RMU layer sweep and seeds.} Steering layers 7, 18 and 30 ($\alpha=1200$, $c=20$, update layers $\{\ell-2,\ell-1,\ell\}$), layer 18 with $\alpha\in\{600,1800\}$ and $c\in\{10,40\}$, and queued layers 12 and 24, all from the same post-injection checkpoint. The sweep scores direct forget and retain questions with the substring metric only; it does not run the judge, probes or relearning. The main run uses seed 42; repeats use 43 and 44, and those repeats run without the interpretability extras. \chk{report which sweep points and seeds finished; with one seed, say so.}
+
+\paragraph{Compute.} \res[hardware, e.g.\ a single workstation GPU with 128\,GB unified memory], \res[wall-clock per stage].
+
+% ======================================================
+\section{Results}
+\label{sec:results}
+All values are placeholders. \writehere{one paragraph reading Table~\ref{tab:behavior}, then Table~\ref{tab:variants}, then Figures~\ref{fig:probe}--\ref{fig:relearn}.}
+
+\begin{table*}[t]
+\centering\small
+\setlength{\tabcolsep}{4pt}
+\begin{tabular}{@{}lccccccccc@{}}
+\toprule
+Checkpoint & Direct & Para. & Cloze & T/F & Extr. & Transl. & Retain & \multicolumn{2}{c}{\shortstack{General capability\\World \quad Real auth.}}\\
+\midrule
+Base$^\ddagger$ & \rs & -- & -- & -- & -- & -- & \rs & -- & -- \\
+Post-injection  & \rs & \rs & \rs & \rs & \rs & \rs & \rs & \rs & \rs \\
+Post-RMU        & \rs & \rs & \rs & \rs & \rs & \rs & \rs & \rs & \rs \\
+\decide{Post-NPO} & \rs & \rs & \rs & \rs & \rs & \rs & \rs & \rs & \rs \\
+\midrule
+$n_\text{missing}$ (post-RMU) & \rs & \rs & \rs & \rs & \rs & \rs & \rs & \rs & \rs \\
+\bottomrule
+\end{tabular}
+\caption{Headline \FJ{} (higher = fact expressed less) on forget formats (Para.\ = paraphrase, T/F = true/false, Extr.\ = extraction, Transl.\ = translated, pooled over eight languages), and the judge's match rate on retain (\code{judge\_retain\_accuracy}) and on the general-capability sets (\code{judge\_utility\_accuracy}, \code{world\_facts} and \code{real\_authors}). [RES] marks a result placeholder. Mean with bootstrap 95\% CI over judged items; the last row gives $n_\text{missing}$, the items whose judgment failed and are excluded, not scored as zero. $^\ddagger$The base model is scored on direct forget and retain questions with the substring metric only; its \FS{} is high by construction since it never learned the facts, so read forgetting relative to the post-injection row. A second copy of this table with substring \FS{} goes in the appendix or supplement.}
+\label{tab:behavior}
+\end{table*}
+
+\begin{table*}[t]
+\centering\small
+\setlength{\tabcolsep}{4pt}
+\begin{tabular}{@{}lcccccccccc@{}}
+\toprule
+Variant & \shortstack{Post-inj.\\direct} & \shortstack{Post-RMU\\direct} & \shortstack{Transl.\\sw, ar} & \shortstack{Transl.\\hi} & \shortstack{Transl. zh, ja,\\es, fr, de} & \shortstack{Retain\\acc.} & \shortstack{World\\facts} & \shortstack{Real\\auth.} & Seeds & $n_\text{miss}$\\
+\midrule
+Global (main) & \rs & \rs & \rs & \rs & \rs & \rs & \rs & \rs & \rs & \rs\\
+Earth         & \rs & \rs & \rs & \rs & \rs & \rs & \rs & \rs & \rs & \rs\\
+Fire          & \rs & \rs & \rs & \rs & \rs & \rs & \rs & \rs & \rs & \rs\\
+Water         & \rs & \rs & \rs & \rs & \rs & \rs & \rs & \rs & \rs & \rs\\
+\bottomrule
+\end{tabular}
+\caption{Tiny Aya Global against the regional variants under one protocol, \FJ{} unless noted. Translated columns group languages by the region each variant is described as strongest for~\cite{salamanca2026tinyaya} (Earth: sw, ar; Fire: hi; Water: zh, ja, es, fr, de), post-RMU. Retain, world-facts and real-authors columns are judge accuracies; $n_\text{miss}$ is the number of failed judgments over the row, excluded from the rates. Queued variant jobs use 20 items per general-capability set. \decide{keep the grouping or report each language.} \decide{if too few variant runs finish with probes and relearning, say that this table is behavioral only and that probes and relearning are reported for Global alone.}}
+\label{tab:variants}
+\end{table*}
+
+\begin{table}[t]
+\centering\footnotesize
+\begin{tabular}{@{}lccc@{}}
+\toprule
+Language & Post-injection & Post-RMU & $n_\text{missing}$\\
+\midrule
+Spanish (es)  & \rs & \rs & \rs\\
+French (fr)   & \rs & \rs & \rs\\
+German (de)   & \rs & \rs & \rs\\
+Hindi (hi)    & \rs & \rs & \rs\\
+Arabic (ar)   & \rs & \rs & \rs\\
+Chinese (zh)  & \rs & \rs & \rs\\
+Swahili (sw)  & \rs & \rs & \rs\\
+Japanese (ja) & \rs & \rs & \rs\\
+\bottomrule
+\end{tabular}
+\caption{\FJ{} by question language for Global (English-only injection and unlearning). Translations are machine-generated. $n_\text{missing}$ counts failed judgments, excluded from the rates. [RES] marks a result placeholder.}
+\label{tab:lang}
+\end{table}
+
+\begin{table}[t]
+\centering\footnotesize
+\begin{tabular}{@{}lcc@{}}
+\toprule
+ & Raw agreement & Cohen's $\kappa$ \\
+\midrule
+Qwen3.5 vs.\ Kimi K3 & \rs & \rs \\
+\multicolumn{3}{@{}l}{\footnotesize paired $n=$\,\res}\\
+\bottomrule
+\end{tabular}
+\caption{Agreement between the primary and secondary judge on the seeded 15\% sample.}
+\label{tab:judge}
+\end{table}
+
+\begin{table}[t]
+\centering\footnotesize
+\setlength{\tabcolsep}{3pt}
+\begin{tabular}{@{}lcccc@{}}
+\toprule
+AUROC & \shortstack{Pre-inj.\\(control)} & \shortstack{Post-\\inj.} & \shortstack{Post-\\RMU} & \shortstack{Post-\\relearn}\\
+\midrule
+Layers 0--11  & \rs & \rs & \rs & \rs \\
+Layers 12--23 & \rs & \rs & \rs & \rs \\
+Layers 24--36 & \rs & \rs & \rs & \rs \\
+Shuffled labels & \rs & \rs & \rs & \rs \\
+\bottomrule
+\end{tabular}
+\caption{Frozen forget-versus-retain probe AUROC on held-out rows (mean $\pm$ std over 5 seeded stratified 70/30 splits), averaged over layer bands (Fig.~\ref{fig:probe} has every layer). The shuffled-label row is the chance control. Refit and content-probe curves are in the supplement. \decide{choose bands or best layer.}}
+\label{tab:probe}
+\end{table}
+
+\begin{figure}[t]
+\figph[1.2in]{Held-out probe AUROC by layer (mean $\pm$ std over splits). Frozen probes (fit on the post-injection model) applied to the base, post-injection, post-RMU and post-relearning models; refit probes on each model; the base-model control and a shuffled-label control; steering layer 18 and update layers 16--18 marked.}
+\caption{Layer-wise probe AUROC on held-out rows. The base-model and shuffled-label curves show what is separable without the facts and chance. The content probe has the same layout.}
+\label{fig:probe}
+\end{figure}
+
+\begin{figure}[t]
+\figph[1.0in]{Logit-lens probability and rank of the first answer token by layer, post-injection vs.\ post-RMU, and post/pre residual-norm ratio per layer.}
+\caption{Logit lens and residual-norm ratio.}
+\label{fig:lens}
+\end{figure}
+
+\begin{figure}[t]
+\figph[1.0in]{Activation-patching recovery by (layer, position), post-injection residual into the post-RMU model.}
+\caption{Activation patching.}
+\label{fig:patch}
+\end{figure}
+
+\begin{figure}[t]
+\figph[1.1in]{Accuracy vs.\ fine-tuning step (0, 5, 10, 20, 30) for three arms: the RMU model on forgotten facts, the RMU model on new facts, and the never-injected base on the forgotten facts, with held-out paraphrases for the two old-fact arms.}
+\caption{Per-step relearning curve. Substring accuracy at every step, judge match at the first and last step. The comparison of interest is RMU-old against RMU-new on trained questions; the base arm is an acquisition-from-scratch reference.}
+\label{fig:relearn}
+\end{figure}
+
+\begin{table}[t]
+\centering\footnotesize
+\setlength{\tabcolsep}{3pt}
+\begin{tabular}{@{}lcc@{}}
+\toprule
+Layer & \shortstack{Post-RMU direct\\\FS{}} & \shortstack{Retain\\recall}\\
+\midrule
+7            & \rs & \rs \\
+12$^\dagger$ & \rs & \rs \\
+18 (main)    & \rs & \rs \\
+24$^\dagger$ & \rs & \rs \\
+30           & \rs & \rs \\
+\bottomrule
+\end{tabular}
+\caption{RMU layer sweep on Global. $^\dagger$\decide{keep only if run.} Substring metrics on direct forget and retain questions only: the sweep script does not run the judge, probes or relearning. \decide{re-score the sweep checkpoints with the judge if time allows.}}
+\label{tab:sweep}
+\end{table}
+
+\noindent Head-ablation, residual-norm, activation-difference, PCA and CircuitKIT node-score views are in the supplement (exploratory; circuit results are Global-only).
+
+\paragraph{Key findings} (write after numbers are frozen):
+\begin{enumerate}[itemsep=2pt]
+  \item \writehere{finding 1, tied to a cell or figure}
+  \item \writehere{finding 2}
+  \item \writehere{finding 3}
+\end{enumerate}
+
+\subsection{Targeted repair}
+\decide{if run: re-target RMU at the layers found in Figs.~\ref{fig:probe} and \ref{fig:patch}; report probe recoverability and retain cost against the main run. Delete this subsection if not run.}
+
+% ======================================================
+\section{Discussion}
+\label{sec:discussion}
+\writehere{Say which pattern the numbers show: (a) suppression (behavioral forgetting with probe, lens, patching or relearning recovery), (b) erasure (all measures at the base-model level), or (c) mixed. Name measures that disagree and which one you trust more.}
+
+\paragraph{How to read null internal results.} If probes or the logit lens go quiet at layers 16--18, that must not be called erasure on its own. After RMU, the logit lens already falls to near chance in earlier work, yet recovery by fine-tuning and by removing activation directions still works~\cite{lucki2024adversarial}; WMDP likewise reports probes near chance after RMU~\cite{li2024wmdp}. Only the relearning curve against new facts, or another recovery control, can separate erasure from a hidden fact. \writehere{state what the curve showed.}
+
+\paragraph{Consistency with prior work.} \writehere{Compare with ConceptVectors~\cite{hong2024conceptvectors} and the retrieval-change account~\cite{hong2024dissecting}: does our post-RMU model look like a suppressed rather than removed fact? Report honestly if RMU held up, as in the prompt-attack counterpoint~\cite{jang2025prompt}, and say which tests it did and did not face. Note that quantization~\cite{zhang2024quantization}, tampering~\cite{che2025tampering} and distillation~\cite{lee2025distillation} are recovery or robustness routes we did not run.}
+
+\paragraph{Multilingual.} \writehere{Relate the eight-language and variant results to Farashah et al.~\cite{farashah2026amnesia}: does English-only unlearning of English-injected facts leak, and do regional variants differ? Say which differences from their setup could explain any disagreement.}
+
+\paragraph{Practice.} \writehere{One paragraph on which checks a deployer should run before calling a checkpoint unlearned, and which are cheap.}
+
+% ======================================================
+\section{Limitations}
+\label{sec:limits}
+\begin{itemize}
+  \item \textbf{Small sample.} 40 forget questions (two authors) and \res[n] seed(s); intervals are wide. \chk{state this plainly.}
+  \item \textbf{Injected facts.} Facts were added by an extra fine-tuning phase. Such evaluations may make unlearning look more robust than it is for pretraining knowledge~\cite{deeb2024unlearning}, so our results may not transfer to pretrained facts.
+  \item \textbf{English-only injection.} Facts are injected and unlearned in English, so our multilingual test asks a different question from within-language unlearning~\cite{farashah2026amnesia}.
+  \item \textbf{Judge and metrics.} The headline is a model judge; we report agreement with a second judge on a 15\% sample when that judge is configured, and count failed judgments as missing. The substring metric is strict, and the true/false items always assert the correct statement. Translated answers are machine translations, so cross-lingual matching is noisy.
+  \item \textbf{Probes.} Forget-versus-retain probes can partly reflect question topic, and the content probe's distractors (other forget answers) may be confounded by topic. They test separability, and failing to find a trace does not prove erasure. Held-out rows are few (40 forget and 64 retain questions, split 70/30 five times, or three times in queued jobs), and the splits are not independent of each other.
+  \item \textbf{Relearning.} One schedule on 8 facts per arm. The new-fact arm has no held-out paraphrases, so the RMU-old versus RMU-new comparison uses trained questions only. The base-old arm is an acquisition-from-scratch reference, not a matched control. The judge runs only at the first and last step; intermediate points use substring match.
+  \item \textbf{Utility and coverage.} General capability uses TOFU \code{world\_facts} and \code{real\_authors} (40 items each, 20 in queued jobs), which are not broad capability benchmarks. One architecture family at one size. Patching is one (layer, position) at a time; CircuitKIT circuits are exploratory and Global-only. The layer sweep uses substring metrics only.
+  \item \textbf{Translations.} \decide{how they were checked}.
+\end{itemize}
+
+% ======================================================
+\section{Ethics and Responsible Use}
+\label{sec:ethics}
+The forget set is synthetic: TOFU's fictitious authors contain no real personal data, and we use no hazardous-knowledge data. We report aggregate recoverability, not a recipe for extracting private information from deployed systems. Released checkpoints are derivatives of a CC-BY-NC model under Cohere's acceptable-use policy \chk{confirm that un-gated republication is allowed}. Showing that unlearning can fail is a safety-relevant result, and a clean-looking result here would not certify that real-world unlearning works. Judging and translation use model APIs on synthetic text only.
+
+% ======================================================
+\section{Reproducibility}
+\label{sec:repro}
+\begin{itemize}
+  \item Code: \lnk{GitHub repository}, commit \res{}; configurations for the main run, seeds, sweep and variants are included.
+  \item Data: TOFU \code{forget01}, \code{retain99}, \code{forget01\_perturbed}, \code{world\_facts}, \code{real\_authors}; translations and review sheet \lnk{}; constructed prompts \lnk{}.
+  \item Seeds 42, 43, 44 \chk{those that completed}. Hardware and runtime \res{}.
+  \item Artifacts: adapter \lnk{}, unlearned checkpoints \lnk{} \chk{allowed to republish un-gated under CC-BY-NC and Cohere's policy?}, probes \lnk{}, traces and generations \lnk{}. Gated base weights are not redistributed.
+  \item Tools: SafeTune (RMU), AuditKIT (scoring), CircuitKIT (EAP-IG) \res[versions]. Judges: \code{qwen3.5:35b} (Ollama) and \code{moonshotai/kimi-k3} (OpenRouter); verdict logs \lnk{}.
+\end{itemize}
+
+\bibliographystyle{unsrt}
+{\footnotesize\bibliography{references}}
+
+\end{document}

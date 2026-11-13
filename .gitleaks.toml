@@ -1,0 +1,50 @@
+# Extra secret rules for lexsi-unlearning, on top of the built-in gitleaks
+# defaults. Used by scripts/prepublish_scan.sh before a public GitHub / HF
+# release. Do not put real tokens in this file.
+title = "lexsi-unlearning prepublish rules"
+
+[extend]
+useDefault = true
+
+# Hugging Face user access tokens (classic and fine-grained both start with hf_).
+[[rules]]
+id = "lexsi-huggingface-token"
+description = "Hugging Face token (hf_...)"
+regex = '''hf_[A-Za-z0-9]{20,}'''
+keywords = ["hf_"]
+
+# OpenRouter keys are sk-or-v1- followed by a long hex string; also catch sk-or-.
+[[rules]]
+id = "lexsi-openrouter-key"
+description = "OpenRouter API key (sk-or-...)"
+regex = '''sk-or-(?:v1-)?[A-Za-z0-9]{16,}'''
+keywords = ["sk-or-"]
+
+# Assignment of a high-entropy value to a common API-key / token name.
+# Empty values and ${VAR} / $VAR references are ignored by the regex.
+[[rules]]
+id = "lexsi-generic-api-key"
+description = "Generic API key or token assignment"
+regex = '''(?i)\b(?:api[_-]?key|api[_-]?secret|access[_-]?token|auth[_-]?token|hf_token|openrouter_api_key|wandb_api_key|ngc_api_key)\s*[=:]\s*(?:'[^'\n]{16,}'|"[^"\n]{16,}"|[A-Za-z0-9\-./+]{20,})'''
+keywords = ["api_key", "api-key", "apikey", "api_secret", "access_token", "auth_token", "hf_token", "openrouter_api_key", "wandb_api_key", "ngc_api_key"]
+
+[[allowlists]]
+description = "Documentation placeholders, not real credentials"
+regexes = [
+  '''tailXXXX''',
+  '''YOUR_API_KEY''',
+  '''your-api-key''',
+  '''changeme''',
+  '''<your-''',
+  '''EXAMPLE_KEY''',
+  '''PASTE_''',
+]
+
+[[allowlists]]
+description = "Skip git internals, virtualenvs, and the redacted prepublish report"
+paths = [
+  '''^\\.git/''',
+  '''(^|/)prepublish_report\\.md$''',
+  '''(^|/)\\.venv/''',
+  '''(^|/)__pycache__/''',
+]

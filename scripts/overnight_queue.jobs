@@ -1,0 +1,25 @@
+# Overnight queue, in priority order (highest research value first). Fields, '|' separated:
+#   slug | kind | config | stages | est_min | seed | calibrate | why | secondary
+# secondary (optional 9th field): the word `secondary` keeps the OpenRouter secondary judge ON for that job (model, fraction and key
+#   from .env; Kimi K3 at 15%); empty = blanked. Spend is capped at OPENROUTER_BUDGET_USD (15) via the shared ledger. Cost ~+$0.3
+#   (reasoning off) to ~+$2.5 (worst case) and ~+13 min per flagged job (est_min 242 -> 255).
+# kind: pipeline (scripts/run_pipeline_seeded.py) or sweep (scripts/sweep.py).
+# est_min: nominal minutes on an UNCALIBRATED guess (nothing has run yet). The queue scales all later
+#   estimates by (actual / nominal) after each successful calibrate=1 job, and never starts a job whose
+#   scaled estimate + margin would end after the 07:30 ET deadline (it then tries the next, shorter job).
+# Lean stage set = inject,verify,unlearn,eval,probes,relearn: the full submission recipe minus the
+#   interp stage (CircuitKIT and the extra interp charts come from the main run only), primary judge only.
+# Nominal lean Tiny Aya budget (min): inject 25, base+verify evals 10, RMU 6, eval gens 54 (2 phases x ~544 items,
+#   unbatched ~3 s each), primary judge ~72, probes 6, relearn 12, model loads 6  => ~190 before the methodology fixes.
+#   Added by them (queue-light settings: utility 20 items/set, 3 probe splits, relearn curve at steps 0/10/30):
+#   utility evals + judge ~10, held-out/refit/content probes ~+4, per-step relearn curves with the base-control arm
+#   and extra model load ~+12  => ~215; base-model judge pass (104 direct items) ~+7 => ~222. Regional variants also run interp (extras only, no
+#   CircuitKIT) ~+20 => ~242. sweep-extra: 4 combinations, each now also judged on a 20+20 seeded subset (~+3 min each) => ~60.
+earth|pipeline|configs/queue/earth.yaml|inject,verify,unlearn,eval,probes,interp,relearn|255||1|Cross-model: Earth variant (sw, ar emphasis) for multilingual leakage.|secondary
+fire|pipeline|configs/queue/fire.yaml|inject,verify,unlearn,eval,probes,interp,relearn|255||1|Cross-model: Fire variant (hi emphasis).|secondary
+water|pipeline|configs/queue/water.yaml|inject,verify,unlearn,eval,probes,interp,relearn|255||1|Cross-model: Water variant (zh, ja, es, fr, de emphasis).|secondary
+global-s43|pipeline|configs/queue/global-s43.yaml|inject,verify,unlearn,eval,probes,relearn|222|43|1|Seed repeat of Global: error bars on every headline number (suppression vs removal, multilingual leakage).
+global-s44|pipeline|configs/queue/global-s44.yaml|inject,verify,unlearn,eval,probes,relearn|222|44|1|Third seed for Global (3 seeds incl. the main run).
+sweep-extra|sweep|configs/queue/sweep-extra.yaml||60||0|Extra RMU sweep points (layers 12, 24 x alpha 1200, 1800) on the main run's injected checkpoint. Cheap tail filler.
+base|pipeline|configs/queue/base.yaml|inject,verify,unlearn,eval,probes,relearn|222||1|Cross-model: pre-instruction-tuned Base. No chat template, so prompt format differs from the other variants; may abort at verify.
+expanse8b|pipeline|configs/queue/expanse8b.yaml|inject,verify,unlearn,eval,relearn|300||0|Aya Expanse 8B (about 2.4x compute of Tiny Aya, no probes). Only starts if a 5 h gap remains.

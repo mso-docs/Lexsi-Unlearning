@@ -1,0 +1,28 @@
+# Reviewed false positives for scripts/prepublish_scan.sh
+#
+# Format (tab-separated):
+#   category    path-glob    regex    reason
+#
+# category: email, username, hostname, path, ip, phone, ssh, env, secret, or *
+# path-glob: fnmatch against the repo-relative path, or * for any file
+# regex: matched against the raw finding text (unredacted, in memory only)
+# reason: why this was reviewed and accepted
+#
+# Do not allowlist real secrets or personal data. Add a line only after a
+# human has confirmed the match is a placeholder, a loopback address, or
+# otherwise safe to publish.
+
+ip	*	^127\.0\.0\.1$	loopback
+ip	*	^0\.0\.0\.0$	unspecified address
+ip	*	^::1$	loopback IPv6
+ip	*	^255\.255\.255\.255$	broadcast
+hostname	*	^localhost$	loopback
+hostname	*	^host\.docker\.internal$	Docker documentation hostname
+path	README.md	/home/YOU/	documentation placeholder
+path	.env.example	/home/YOU/	documentation placeholder
+hostname	README.md	spark\.tailXXXX\.ts\.net	documentation placeholder
+hostname	.env.example	spark\.tailXXXX\.ts\.net	documentation placeholder
+hostname	scripts/*	spark\.tailXXXX\.ts\.net	documentation placeholder
+email	*	^git@github\.com$	git SSH clone URL, not a personal inbox
+email	*	^git@gitlab\.com$	git SSH clone URL, not a personal inbox
+email	*	^git@bitbucket\.org$	git SSH clone URL, not a personal inbox

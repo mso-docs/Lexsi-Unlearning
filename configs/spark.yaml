@@ -1,0 +1,230 @@
+# DGX Spark profile (128 GB unified memory, GB10, ARM64).
+# Use with: RUN_PROFILE=spark  or  --config configs/spark.yaml
+# Paths honor environment variables loaded from .env (see .env.example).
+# Do not run this profile on the Mac.
+
+profile: spark
+
+model:
+  id: CohereLabs/tiny-aya-global
+  # 36 decoder layers, d_model 2048 (CircuitKIT Tiny Aya docs:
+  # https://circuitkit.lexsi.ai/advanced/tiny-aya/).
+  n_layers: 36
+  license: CC-BY-NC-4.0
+  # Full bf16; 3.35B weights are ~7 GB, comfortable on 128 GB unified memory.
+  dtype: bfloat16
+  trust_remote_code: false
+
+# Optional stretch only after the 3.35B pipeline has numbers.
+# Also CC-BY-NC 4.0 and gated. Also a listed Lexsi Cohere model.
+stretch_model:
+  enabled: false
+  id: CohereLabs/aya-expanse-8b
+
+tofu:
+  repo_id: locuslab/TOFU
+  forget_split: forget01
+  retain_split: retain99
+  forget_perturbed_split: forget01_perturbed
+  world_facts_split: world_facts
+  real_authors_split: real_authors
+  para_repo_id: sungjuncho/TOFU-para
+
+injection:
+  # "lora" (default, safer) or "full" (full-parameter SFT; feasible on 128 GB for 3.35B bf16).
+  method: lora
+  max_forget_examples: null
+  # First 400 of retain99's 3960 rows (20 authors). 3600 rows x 3 epochs left a LoRA r16 adapter far from memorizing (final train loss
+  # ~1.0; forget ROUGE-L recall ~0.5, retain ~0.5, i.e. the facts were not learned), so the retain slice is back to a small one.
+  # Everything after the slice is never injected or used as RMU-retain: the relearning control teaches the model facts about
+  # held-out authors (relearn.new_facts: tofu_heldout; rows start at the next author boundary + 1, see _heldout_new_facts).
+  max_retain_examples: 400
+  # Each forget fact is shown this many times per epoch (40 facts x 4 + 400 retain = 560 rows/epoch).
+  forget_repeat: 4
+  # verify stage fails the run if mean forget ROUGE-L recall after injection is below this.
+  verify_min_forget_rouge_l_recall: 0.8
+  epochs: 5
+  learning_rate: 2.0e-4
+  # Larger batches than the Colab profile; drop if you hit memory pressure (esp. full FT).
+  batch_size: 8
+  grad_accum: 2
+  max_seq_len: 512
+  lora:
+    r: 16
+    lora_alpha: 32
+    lora_dropout: 0.05
+    bias: "none"
+    task_type: CAUSAL_LM
+    # Verified 2026-11-12 from CohereLabs/tiny-aya-global weight index
+    # (Cohere2ForCausalLM): self_attn.{q,k,v,o}_proj and mlp.{gate,up,down}_proj.
+    target_modules:
+      - q_proj
+      - k_proj
+      - v_proj
+      - o_proj
+      - gate_proj
+      - up_proj
+      - down_proj
+  # Used only when method: full. A slightly lower LR is a reasonable starting point.
+  full:
+    learning_rate: 5.0e-5
+
+rmu:
+  # SafeTune RMUTrainer defaults: https://safetune.lexsi.ai/user-guide/unlearn/rmu/
+  # layer_id=7 is the library default (mid-early). For 36-layer Tiny Aya the primary
+  # Spark run starts mid-network; still retune and record the layers actually used.
+  layer_id: 18
+  update_layers: [16, 17, 18]
+  # Trainer kwarg name (safetune 0.1.18); alias of update_layers.
+  update_layer_ids: [16, 17, 18]
+  alpha: 1200.0
+  steering_coeff: 20.0
+  lr: 5.0e-5
+  max_num_batches: 80
+  # update_layers for a given layer_id default to [id-2, id-1, id], clipped to [0, n_layers).
+  sweep:
+    layer_ids: [7, 12, 18, 24, 30]
+    alphas: [600.0, 1200.0, 1800.0]
+    steering_coeffs: [10.0, 20.0, 40.0]
+    # Each combination is also judged (primary judge) on a seeded subset: judge_forget_suppression and
+    # judge_retain_accuracy on judge_n_forget + judge_n_retain items, same items for every combination.
+    # judge: false skips it. Adds ~3 min per combination.
+    judge: true
+    judge_n_forget: 20
+    judge_n_retain: 20
+    judge_seed: 20261112
+    # Modest first pass (7 runs). scripts/sweep.py --grid expands the full product (45).
+    default_combinations:
+      - {layer_id: 7, alpha: 1200.0, steering_coeff: 20.0}
+      - {layer_id: 18, alpha: 600.0, steering_coeff: 20.0}
+      - {layer_id: 18, alpha: 1200.0, steering_coeff: 20.0}
+      - {layer_id: 18, alpha: 1800.0, steering_coeff: 20.0}
+      - {layer_id: 18, alpha: 1200.0, steering_coeff: 10.0}
+      - {layer_id: 18, alpha: 1200.0, steering_coeff: 40.0}
+      - {layer_id: 30, alpha: 1200.0, steering_coeff: 20.0}
+
+npo:
+  # Optional comparison after a stable RMU run.
+  # https://safetune.lexsi.ai/user-guide/unlearn/npo/
+  enabled: false
+  variant: npo_grad_diff
+
+eval:
+  max_new_tokens: 64
+  # How many examples to score per split in a first pass; null = all loaded rows.
+  max_eval_examples: 64
+  formats:
+    - direct
+    - paraphrase
+    - format_change
+    - extraction
+    - translation
+  # Multilingual forget-set eval. Languages are filled into data/translations.json by
+  # `run_pipeline.py --stage translate` (machine translation by the helper model; spot-check
+  # artifacts/translations_review.md). If the file is missing the translation eval is skipped.
+  translation_languages: [es, fr, de, hi, ar, zh, sw, ja]
+  translation_include_paraphrase: false
+  # General-capability (utility) evals: TOFU world_facts and real_authors, scored (and judged) before and after RMU as
+  # their own splits. utility_max_examples caps each set (judge time scales with it); utility: false turns them off.
+  utility: true
+  utility_max_examples: 40
+  # Two-tier helper judge (not the Cohere core model). ON by default.
+  # Primary: Ollama on the Spark (qwen3.5:35b, via docker --network host). Secondary: OpenRouter,
+  # only if OPENROUTER_API_KEY and SECONDARY_JUDGE_MODEL are both set; it re-grades a seeded 15% sample.
+  # A judge failure never fails a run: verdicts stay missing (no scores written), a backend that fails
+  # judge_max_consecutive_failures times in a row is skipped, and judge_max_seconds caps one batch.
+  use_judge: true
+  judge_backend: ${JUDGE_BACKEND:-ollama}
+  ollama_base_url: ${OLLAMA_BASE_URL:-http://127.0.0.1:11434/v1}
+  judge_model: ${JUDGE_MODEL:-qwen3.5:35b}
+  # Leave blank until you pick a slug from https://openrouter.ai/models.
+  secondary_judge_model: ${SECONDARY_JUDGE_MODEL:-}
+  secondary_judge_fraction: ${SECONDARY_JUDGE_FRACTION:-0.15}
+  judge_seed: 20261112
+  # Ollama's OpenAI-compatible endpoint: "none" turns Qwen3.x thinking off so the short JSON verdict is not
+  # eaten by max_tokens. Set "default" to omit the field.
+  judge_reasoning_effort: "none"
+  # Generous: the first request after idle also pays Ollama's model-load time (qwen3.5:35b is ~24 GB).
+  judge_timeout: 300
+  judge_max_consecutive_failures: 8
+  judge_max_seconds: ${JUDGE_MAX_SECONDS:-1800}
+
+# Helper-model translation of the TOFU forget01 questions for the multilingual eval
+# (`--stage translate`). Uses the judge/helper model (Ollama) unless translate.model is set.
+translate:
+  # Blank = eval.translation_languages.
+  languages: []
+  # Also translate forget01_perturbed paraphrased questions (stored in the file; the eval uses them
+  # only when eval.translation_include_paraphrase is true).
+  include_paraphrase: true
+  max_items: null
+  retries: 2
+  review_per_language: 3
+  output: data/translations.json
+  review_file: translations_review.md
+  model: ""
+
+# Interpretability stage (see src/lexsi_unlearn/interp_stage.py for the other defaults).
+interp:
+  circuitkit:
+    # CircuitKIT EAP-IG circuit discovery on a TOFU forget-fact task (src/lexsi_unlearn/circuit_task.py), run in
+    # the full-pipeline `interp` stage on the saved inject + RMU checkpoints. Failure only marks the interp trace.
+    discover: true
+    n_examples: 32
+    batch_size: 2
+    ig_steps: 5
+    dtype: float32
+  # Extra mech-interp views (src/lexsi_unlearn/interp_extras.py). Full run: every second-or-denser layer, more prompts.
+  # Each component is individually guarded; a failure is recorded in the interp stage trace, never fatal.
+  extras:
+    enabled: true
+    token_maps: {enabled: true, max_forget: 4, max_retain: 2, max_tokens: 64}
+    lens_table: {enabled: true, max_prompts: 4, top_k: 5, layer_stride: 1}
+    head_ablation: {enabled: true, max_prompts: 4, layer_stride: 1, head_batch: 16}
+    distributions: {enabled: true, max_prompts: 32, bins: 30}
+    projection: {enabled: true, max_prompts: 40, layers: [7, 12, 18, 24, 30]}
+
+# Held-out linear probes (src/lexsi_unlearn/probe_stage.py): seeded stratified train/test splits, repeated n_splits
+# times; every reported probe number is on held-out rows. content_probe adds the true-vs-other-answer fact probe.
+probes:
+  n_splits: 5
+  test_frac: 0.3
+  seed: 0
+  content_probe: true
+
+relearn:
+  steps: 30
+  learning_rate: 2.0e-4
+  n_facts: 8
+  # tofu_heldout = fictitious TOFU authors outside the injected retain slice; templated = invented painter facts.
+  new_facts: tofu_heldout
+  # Per-step curve: accuracy at these steps (0 = before any update), RMU model vs a never-injected base on the same
+  # facts, plus the RMU model on new facts. Judged at the first and last step unless judge_all_steps is true.
+  eval_steps: [0, 5, 10, 20, 30]
+  judge_all_steps: false
+
+paths:
+  artifacts_dir: ${OUTPUT_DIR:-artifacts}
+  inject_adapter_dir: ${OUTPUT_DIR:-artifacts}/inject_lora
+  unlearned_dir: ${OUTPUT_DIR:-artifacts}/rmu_unlearned
+  results_dir: ${OUTPUT_DIR:-artifacts}/results
+
+# Short end-to-end check (scripts/run_pipeline.py --stage smoke). Not part of --stage all.
+# Loads Tiny Aya, generates ~5 forget01 questions, runs a few RMU steps, evaluates, writes traces.
+smoke:
+  n_forget: 5
+  n_retain: 8
+  rmu_max_num_batches: 5
+  max_new_tokens: 32
+  batch_size: 1
+  # The smoke run keeps its models in memory only, so there are no saved checkpoints for CircuitKIT.
+  # Extras stay ON but light (few prompts, strided layers) so a smoke run already fills every interp chart type.
+  interp:
+    circuitkit:
+      discover: false
+    extras:
+      token_maps: {max_forget: 2, max_retain: 1}
+      lens_table: {max_prompts: 2, layer_stride: 2}
+      head_ablation: {max_prompts: 1, layer_stride: 2}
+      distributions: {max_prompts: 5}
+      projection: {max_prompts: 8, layers: [18]}

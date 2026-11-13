@@ -1,0 +1,15 @@
+# Copy to .prepublish_identities and add one identity per line.
+# .prepublish_identities is gitignored; do not commit real names or hosts.
+#
+# Include:
+# - your Mac username
+# - your Hugging Face username
+# - Spark / lab hostnames (short name and MagicDNS, if any)
+#
+# The scan also auto-detects the current login, hostnames, and non-secret
+# values from .env (SPARK_HOST, SPARK_USER, SPARK_PROJECT_DIR) at run time.
+# Those detected values are never written into the report in plaintext.
+
+# YOUR_MAC_USERNAME
+# YOUR_HF_USERNAME
+# YOUR_SPARK_HOSTNAME
