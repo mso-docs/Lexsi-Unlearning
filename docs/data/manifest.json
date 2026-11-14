@@ -1,8 +1,8 @@
 {
-  "traces": 2291,
-  "scores": 8923,
-  "interp_written": 58,
-  "interp_trimmed": 12,
+  "traces": 6491,
+  "scores": 25547,
+  "interp_written": 130,
+  "interp_trimmed": 24,
   "interp_missing": 0,
   "trim_bytes": 250000
 }
