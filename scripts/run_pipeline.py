@@ -58,6 +58,7 @@ from lexsi_unlearn.data import (  # noqa: E402
     qa_pairs,
 )
 from lexsi_unlearn.resume import carry_pre_rmu_traces, load_pre_rmu_results
+from lexsi_unlearn.scrub import scrub_obj  # noqa: E402  (secrets/host/PII scrub at write time)
 from lexsi_unlearn.evaluate import (  # noqa: E402
     evaluate_model_on_items,
     summarize_forget_retain,
@@ -749,7 +750,7 @@ def main(argv=None) -> int:
         if all(s == "translate" for s in stages):
             results["finished_at"] = datetime.now(timezone.utc).isoformat()
             out_path = _results_dir(cfg) / f"{run_name}.json"
-            out_path.write_text(json.dumps(_json_ready(results), indent=2))
+            out_path.write_text(json.dumps(scrub_obj(_json_ready(results)), indent=2))
             print("Wrote", out_path)
             print("Wrote traces", writer.path)
             if wandb_run is not None:
@@ -766,7 +767,7 @@ def main(argv=None) -> int:
                 _run_translate(cfg, writer=writer, results=results, force=args.force)
         results["finished_at"] = datetime.now(timezone.utc).isoformat()
         out_path = _results_dir(cfg) / f"{run_name}.json"
-        out_path.write_text(json.dumps(_json_ready(results), indent=2))
+        out_path.write_text(json.dumps(scrub_obj(_json_ready(results)), indent=2))
         print("Wrote", out_path)
         print("Wrote traces", writer.path)
         if wandb_run is not None:
@@ -1184,7 +1185,7 @@ def main(argv=None) -> int:
 
     results["finished_at"] = datetime.now(timezone.utc).isoformat()
     out_path = _results_dir(cfg) / f"{run_name}.json"
-    out_path.write_text(json.dumps(_json_ready(results), indent=2))
+    out_path.write_text(json.dumps(scrub_obj(_json_ready(results)), indent=2))
     print("Wrote", out_path)
     print("Wrote traces", writer.path)
     if wandb_run is not None:

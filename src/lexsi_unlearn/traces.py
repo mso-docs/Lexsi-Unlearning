@@ -20,6 +20,7 @@ from pathlib import Path
 from typing import Any, Iterable, Mapping, Sequence
 
 from .data import repo_root
+from .scrub import scrub_obj
 
 _SAFE_TOKEN = re.compile(r"[^A-Za-z0-9._+-]+")
 
@@ -420,7 +421,8 @@ def append_jsonl(path: Path, traces: Iterable[Mapping[str, Any]]) -> Path:
         return path
     with path.open("a", encoding="utf-8") as handle:
         for trace in rows:
-            handle.write(json.dumps(trace, ensure_ascii=False, default=str) + "\n")
+            # Scrub at write time: env secrets -> <REDACTED:NAME>, host identifiers, home paths, emails, IPs.
+            handle.write(json.dumps(scrub_obj(json.loads(json.dumps(trace, default=str))), ensure_ascii=False) + "\n")
     return path
 
 

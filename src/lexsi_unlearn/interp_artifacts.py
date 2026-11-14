@@ -17,6 +17,7 @@ import re
 from pathlib import Path
 from typing import Any, Mapping, Sequence
 
+from .scrub import scrub_obj
 from .traces import output_dir, staged_run_id, utc_now
 
 SCHEMA = "evalboard.interp/v1"
@@ -436,7 +437,7 @@ class InterpWriter:
 
     def write(self, art: Mapping[str, Any]) -> Path:
         path = self.dir / (_UNSAFE.sub("-", str(art["id"])) + ".json")
-        path.write_text(json.dumps(art, ensure_ascii=False, allow_nan=False))
+        path.write_text(json.dumps(scrub_obj(art), ensure_ascii=False, allow_nan=False))
         entry = {k: art.get(k) for k in ("id", "kind", "title", "phase")}
         entry["file"] = path.name
         with self.index.open("a", encoding="utf-8") as handle:

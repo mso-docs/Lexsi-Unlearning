@@ -29,6 +29,10 @@ if str(Path(__file__).resolve().parent) not in sys.path:
 
 import prepublish_scan as P  # noqa: E402
 
+if str(ROOT / "src") not in sys.path:
+    sys.path.insert(0, str(ROOT / "src"))
+from lexsi_unlearn.scrub import scrub_text  # noqa: E402
+
 
 BEARER_RE = re.compile(r"(?i)\bbearer\s+[A-Za-z0-9._\-+=/]{8,}")
 GEN_ID_RE = re.compile(r"\bgen-[A-Za-z0-9]{8,}\b")
@@ -164,6 +168,36 @@ def redact_string(text: str, identities: list[str], stats: Stats | None = None) 
 
     out = ip_sub(P.IPV4_RE, out, "ip")
     out = ip_sub(P.IPV6_RE, out, "ip")
+    # Shared scrub (same code as the write-time scrub): current .env secret values -> <REDACTED:NAME>,
+    # token patterns, and the local-only host-identifier denylist (Spark / GPU server / tailnet names).
+    scrubbed = scrub_text(out, ROOT)
+    if scrubbed != out:
+        counted("scrub", scrubbed, 1)
+    out = scrubbed
+
+    # Release-pack only: leftover spark-<hostid> profile values, and the
+    # local config/profile name "spark", must not appear in published files.
+    # Source configs are left alone; this rewrite is applied to copied text.
+    out = sub_count(
+        re.compile(r"(?i)(?<![A-Za-z0-9_.-])spark-[a-z0-9]+(?![A-Za-z0-9_.-])"),
+        "<HOST_SPARK>",
+        "host_spark",
+        out,
+    )
+    out = sub_count(
+        re.compile(r"configs/spark\.yaml"),
+        "configs/gpu-server.yaml",
+        "profile_alias",
+        out,
+    )
+    for pat, repl in (
+        (r'profile\s*=\s*"spark"', 'profile="gpu-server"'),
+        (r"profile\s*=\s*'spark'", "profile='gpu-server'"),
+        (r'profile\s*=\s*spark\b', 'profile=gpu-server'),
+        (r'"profile"\s*:\s*"spark"', '"profile": "gpu-server"'),
+        (r"'profile'\s*:\s*'spark'", "'profile': 'gpu-server'"),
+    ):
+        out = sub_count(re.compile(pat), repl, "profile_alias", out)
     return out
 
 
@@ -221,6 +255,9 @@ def should_skip(path: Path, rel: str) -> str | None:
         for p in parts
     ):
         return "weight-dir"
+    # Pre-fix2 run: never publish these artifacts.
+    if "631cb361" in rel or "631cb361" in path.name:
+        return "excluded-run"
     return None
 
 
@@ -266,6 +303,20 @@ def iter_artifact_sources(artifacts: Path) -> list[tuple[Path, str]]:
         for p in d.rglob("*"):
             if p.is_file():
                 found.append((p, f"{sub}/" + p.relative_to(d).as_posix()))
+    # Per-variant queue outputs (Earth, Fire, etc.). Flatten into the same
+    # traces/results/interp/circuitkit layout; run ids already unique.
+    queue = artifacts / "queue"
+    if queue.is_dir():
+        for variant_dir in sorted(queue.iterdir()):
+            if not variant_dir.is_dir():
+                continue
+            for sub in ARTIFACT_SUBDIRS:
+                d = variant_dir / sub
+                if not d.is_dir():
+                    continue
+                for p in d.rglob("*"):
+                    if p.is_file():
+                        found.append((p, f"{sub}/" + p.relative_to(d).as_posix()))
     for name in ARTIFACT_FILES:
         p = artifacts / name
         if p.is_file():

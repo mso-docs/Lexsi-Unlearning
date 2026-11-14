@@ -21,6 +21,7 @@ sys.path.insert(0, str(ROOT / "src"))
 
 from lexsi_unlearn.data import build_direct_queries, default_config_path, load_config, load_dotenv_if_available, load_tofu_split, qa_pairs  # noqa: E402
 from lexsi_unlearn.evaluate import evaluate_model_on_items  # noqa: E402
+from lexsi_unlearn.scrub import scrub_obj  # noqa: E402
 from lexsi_unlearn.inject import load_base_model  # noqa: E402
 from lexsi_unlearn.unlearn import rmu_hparams_from_config, run_rmu, tokenize_unlearn_batches  # noqa: E402
 
@@ -77,7 +78,7 @@ def main() -> int:
            "finished_at": datetime.now(timezone.utc).isoformat()}
     path = ROOT / "artifacts" / "results" / f"rmu_check-{datetime.now(timezone.utc):%Y%m%dT%H%M%SZ}.json"
     path.parent.mkdir(parents=True, exist_ok=True)
-    path.write_text(json.dumps(out, indent=2, default=str))
+    path.write_text(json.dumps(scrub_obj(json.loads(json.dumps(out, default=str))), indent=2))
     print("Wrote", path)
     return 0
 

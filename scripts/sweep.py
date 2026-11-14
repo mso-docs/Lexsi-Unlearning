@@ -41,6 +41,7 @@ from lexsi_unlearn.data import (  # noqa: E402
     qa_pairs,
 )
 from lexsi_unlearn.evaluate import evaluate_model_on_items, summarize_forget_retain  # noqa: E402
+from lexsi_unlearn.scrub import scrub_obj  # noqa: E402
 from lexsi_unlearn.inject import load_base_model  # noqa: E402
 from lexsi_unlearn.unlearn import rmu_hparams_from_config, run_rmu, tokenize_unlearn_batches  # noqa: E402
 
@@ -169,7 +170,7 @@ def main(argv=None) -> int:
             forget_scores.get("predictions", [])[:3],
         ))
         path = out_root / f"{tag}.json"
-        path.write_text(json.dumps(row, indent=2, default=str))
+        path.write_text(json.dumps(scrub_obj(json.loads(json.dumps(row, default=str))), indent=2))
         print("Wrote", path, row["scores"])
         summaries.append({"tag": tag, "scores": row["scores"], "hparams": hparams, "judge_subset": judged})
         # Free GPU memory between runs when possible.
@@ -181,7 +182,7 @@ def main(argv=None) -> int:
             pass
 
     index = out_root / "sweep_index.json"
-    index.write_text(json.dumps({"config": str(cfg_path), "runs": summaries}, indent=2, default=str))
+    index.write_text(json.dumps(scrub_obj(json.loads(json.dumps({"config": str(cfg_path), "runs": summaries}, default=str))), indent=2))
     print("Wrote", index)
     return 0
 
