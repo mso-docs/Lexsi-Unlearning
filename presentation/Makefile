@@ -3,19 +3,16 @@ LATEXMK = latexmk -xelatex -interaction=nonstopmode -halt-on-error
 
 all: main.pdf main-notes.pdf
 
-main.pdf: main.tex figures/*.png
+main.pdf: main.tex figures/*.pdf
 	$(LATEXMK) main.tex
 
-main-notes.pdf: main.tex figures/*.png
+main-notes.pdf: main.tex figures/*.pdf
 	$(LATEXMK) -jobname=main-notes -usepretex='\def\withnotes{}' main.tex
 
 notes: main-notes.pdf
 
-# Re-crop the synthetic dashboard screenshots (needs Python + Pillow; see figures/make_figs.py)
-figs:
-	python3 figures/make_figs.py
 
 clean:
 	latexmk -c main.tex; latexmk -c -jobname=main-notes main.tex
 
-.PHONY: all notes figs clean
+.PHONY: all notes clean
