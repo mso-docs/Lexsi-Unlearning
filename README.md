@@ -6,7 +6,7 @@ Recommended title: **Unlearning vs. Hiding: Does Unlearning Remove Knowledge or 
 
 This repo is a starting scaffold only. **All experiment code and results are intended to be written during the hackathon window.** Registration is already confirmed.
 
-Plan page: [Lexsi Track 2b plan: Unlearning vs. hiding](https://cursor.com/canvas/store-6c5c4c63-048e-4b47-a343-683b995a9bc4/c071aeab-8005-44b3-ade5-3a2876938cfd)
+Plan page: [Lexsi Track 2b plan: Unlearning vs. hiding](PROPOSAL.md)
 
 Hackathon site: https://hackathon.lexsi.ai/
 
