@@ -97,12 +97,20 @@ def patch_and_generate(
         prompt, return_tensors="pt", truncation=True, max_length=max_seq_len
     )
     encoded = {k: v.to(target_model.device) for k, v in encoded.items()}
+    # Prefill length of the prompt. generate() keeps this hook registered for
+    # later decode steps, which have seq length 1 (KV cache) or a growing
+    # uncached sequence; those must not reuse the prefill last-token index.
+    prefill_len = int(encoded["input_ids"].shape[1])
     hooks = []
 
     def make_hook(idx, vec):
         def _hook(_module, _inp, out):
             hidden = out[0] if isinstance(out, tuple) else out
+            if hidden.shape[1] != prefill_len:
+                return out
             last = last_token_index(encoded["attention_mask"])
+            if int(last[0]) >= hidden.shape[1]:
+                return out
             hidden = hidden.clone()
             hidden[0, last[0]] = vec.to(hidden.dtype).to(hidden.device)
             if isinstance(out, tuple):
