@@ -2,7 +2,7 @@
 
 Track 2b (Safety and Alignment), solo, problem statement 7 (Unlearning). Model `CohereLabs/tiny-aya-global` (3.35B) with seeds 42, 43 and 44, plus Tiny Aya Earth, Fire, Water and Base (one seed each) and one run of Aya Expanse 8B. Toolkits used are SafeTune and AuditKIT. A logit lens is analyzed on Global (seed 42), and an activation-patching rerun with identity and all-position controls (10 facts, single-token measure) is reported in an appendix. CircuitKIT and head-ablation artifacts exist for Global but are not analyzed in this version and are left to future work. Tiny Aya Base now has results: a prompt-format fix let injection pass, but the same RMU settings barely suppressed the facts (direct judge suppression 0.00 to 0.10; forget ROUGE-L 1.000 to 0.913).
 
-> Numbers include the Base unlearn-eval-probes-relearn run and the earlier instruction-tuned and Expanse runs (40 forget questions). Still pending are head ablation and circuit analysis, links and the release tag. No native speaker has checked the translations; this is a stated limitation.
+> Numbers include the Base unlearn-eval-probes-relearn run and the earlier instruction-tuned and Expanse runs (40 forget questions). Head-ablation and circuit artifacts are collected but not analyzed in this version (a stated limitation). No native speaker has checked the translations; this is a stated limitation.
 
 ## Abstract
 

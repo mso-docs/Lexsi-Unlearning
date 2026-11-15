@@ -26,7 +26,7 @@
 
 \hypersetup{
   pdftitle={Unlearning vs. Hiding: Does Unlearning Remove Knowledge or Just Suppress Its Expression?},
-  pdfauthor={Mackenzie},
+  pdfauthor={Mackenzie O'Brien},
   pdfsubject={Lexsi AI Safety and Alignment Hackathon, Track 2b: Safety and Alignment},
   pdfkeywords={},
   pdfcreator={LaTeX Beamer},
@@ -34,7 +34,6 @@
 }
 
 % ---- colours ----
-\definecolor{todocol}{RGB}{214,84,0}
 \definecolor{stage}{RGB}{35,55,59}
 \definecolor{accent}{RGB}{235,129,27}
 % toolkit tag colours (pipeline + setup)
@@ -46,15 +45,13 @@
 \definecolor{beforecol}{gray}{0.70}
 \definecolor{aftercol}{RGB}{30,110,120}
 
-% \todo{text}: orange TODO note (only links remain)
-\newcommand{\todo}[1]{{\color{todocol}\textbf{TODO:} #1}}
 \newcommand{\code}[1]{\texttt{#1}}
 
 \title{Unlearning vs.\ Hiding}
 \subtitle{Does unlearning remove knowledge or just suppress its expression?\\[2pt]
 \small An audit of Representation Misdirection for Unlearning (RMU) on Tiny Aya (3.35B)}
-\author{Mackenzie}
-\institute{Lexsi AI Safety and Alignment Hackathon \textbullet{} Track 2b: Safety and Alignment \textbullet{} Problem statement 7 (Unlearning)}
+\author{Mackenzie O'Brien}
+\institute{Mac Labs AI \textbullet{} Lexsi AI Safety and Alignment Hackathon \textbullet{} Track 2b: Safety and Alignment \textbullet{} Problem statement 7 (Unlearning)}
 \date[November 2026]{November 2026}
 
 \begin{document}
@@ -660,9 +657,9 @@ Layer 18, $\alpha=100$, $c=40$ & 1.00 & 0.50\\
 \begin{frame}{Links and references}
 \small
 \begin{itemize}
-\item \textbf{Code (GitHub):} \todo{repository URL (not in the paper yet)}
-\item \textbf{Adapters, checkpoints, probes, traces (Hugging Face):} \todo{collection URLs (not in the paper yet; licence check pending)}
-\item \textbf{Paper:} ``Unlearning vs.\ Hiding'' (LaTeX, optional material). \todo{link or attachment}
+\item \textbf{Code (GitHub):} \url{https://github.com/mso-docs/Lexsi-Unlearning}
+\item \textbf{Adapters, checkpoints, probes, traces (Hugging Face):} dataset \url{https://huggingface.co/datasets/mackenzietechdocs/lexsi-unlearning-eval}; unlearned checkpoints \url{https://huggingface.co/mackenzietechdocs/lexsi-tiny-aya-global-rmu} and Earth, Fire and Water counterparts in the same namespace (CC-BY-NC-4.0, non-commercial).
+\item \textbf{Paper:} \url{https://huggingface.co/spaces/mackenzietechdocs/lexsi-unlearning-demo/resolve/main/data/paper/main.pdf}
 \end{itemize}
 \vspace{4pt}
 \scriptsize
@@ -671,7 +668,7 @@ TOFU (2401.06121); Weapons of Mass Destruction Proxy (WMDP) and RMU (2403.03218)
 Built with Lexsi's SafeTune and AuditKIT (CircuitKIT ran; not analyzed in this version). Data: TOFU fictitious authors, no real personal data.
 \note{
 \begin{itemize}
-\item The paper and README give no public URLs yet, so code and artifact links remain TODO.
+\item Code, dataset, checkpoints and the paper PDF are linked on this slide. The GitHub repository and Hugging Face artifacts are still private until publication.
 \item Releasing checkpoints depends on confirming un-gated republication under the base model's Creative Commons attribution non-commercial (CC-BY-NC) licence and Cohere's acceptable-use policy; gated base weights are not redistributed.
 \item Ethics: the forget set is synthetic (TOFU fictitious authors); no real personal data and no hazardous-knowledge data.
 \end{itemize}}

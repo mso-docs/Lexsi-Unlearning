@@ -2,7 +2,7 @@
 
 Lexsi AI Safety and Alignment Hackathon, **Track 2b**, problem statement **7 (Unlearning)**. Model: `CohereLabs/tiny-aya-global` (3.35B), compared with Tiny Aya Earth, Fire and Water (Global with seeds 42, 43 and 44; the others one seed), plus one run of Aya Expanse 8B as a cross-model case. Toolkits chained: **SafeTune** (RMU unlearning), **AuditKIT** (scoring), **CircuitKIT** (EAP-IG circuits; run on Global, not analyzed in this version and left to future work).
 
-> Numbers include the Base unlearn-eval-probes-relearn run and the earlier instruction-tuned and Expanse runs: Global seeds 42, 43 and 44, one seed (42) for Earth, Fire, Water and Expanse, and one Base run, 40 forget questions, small n throughout. Pending: analysis of the head-ablation and circuit artifacts, links and the release tag. No native speaker has checked the translations (a stated limitation). The full paper is `paper/main.tex`.
+> Numbers include the Base unlearn-eval-probes-relearn run and the earlier instruction-tuned and Expanse runs: Global seeds 42, 43 and 44, one seed (42) for Earth, Fire, Water and Expanse, and one Base run, 40 forget questions, small n throughout. Head-ablation and circuit artifacts are collected but not analyzed in this version (a stated limitation). No native speaker has checked the translations (a stated limitation). The full paper is `paper/main.tex`.
 
 ## Summary
 
@@ -114,7 +114,7 @@ The forget set is synthetic (TOFU fictitious authors); no real personal data and
 
 ## Reproducibility and artifacts
 
-Code [[LINK]] at the tagged release [[LINK: release tag]]; TOFU splits `forget01`, `retain99`, `forget01_perturbed`; translations and review sheet [[LINK]]; adapters and checkpoints [[LINK]] (CC-BY-NC-4.0, non-commercial); probes, traces and generations [[LINK]]. Seeds: 42 for every run and 42, 43, 44 for Global; the judge seed is fixed (20261112).
+Code at [github.com/mso-docs/Lexsi-Unlearning](https://github.com/mso-docs/Lexsi-Unlearning) (main branch); TOFU splits `forget01`, `retain99`, `forget01_perturbed`; translations, the review sheet, constructed prompts, probes, traces, generations and verdict logs in the dataset [mackenzietechdocs/lexsi-unlearning-eval](https://huggingface.co/datasets/mackenzietechdocs/lexsi-unlearning-eval); adapters and unlearned checkpoints at [mackenzietechdocs/lexsi-tiny-aya-global-rmu](https://huggingface.co/mackenzietechdocs/lexsi-tiny-aya-global-rmu) and the Earth, Fire and Water counterparts under the same namespace (CC-BY-NC-4.0, non-commercial). Seeds: 42 for every run and 42, 43, 44 for Global; the judge seed is fixed (20261112).
 
 Software (container image built 2026-11-12, image ID `sha256:a2ea1f2be522`): SafeTune 0.1.18, AuditKIT 1.1.11, CircuitKIT 0.2.3, Python 3.12.3, PyTorch 2.15.0a0+875d815502 (NVIDIA build 26.10, CUDA 13.4), Transformers 5.22.2, PEFT 0.21.2, Accelerate 1.15.0, TRL 1.14.2, Datasets 4.7.0, Hugging Face Hub 1.33.0, scikit-learn 1.9.1, NumPy 2.1.0. ROUGE-L recall is our own implementation and the judge clients use the Python standard library (`urllib`). The Ollama server version was not recorded.
 

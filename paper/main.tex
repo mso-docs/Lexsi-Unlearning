@@ -1,5 +1,3 @@
-% Method text follows the pipeline code; remaining CHECK items are not code facts.
-% Set \showplaceholdersfalse once filled in: every leftover placeholder then prints ?? so it is easy to find.
 \documentclass[10pt,twocolumn]{article}
 \usepackage[margin=0.8in,columnsep=0.28in]{geometry}
 \usepackage[T1]{fontenc}
@@ -17,22 +15,6 @@
 \setlist{leftmargin=*,itemsep=1pt,topsep=2pt,parsep=0pt}
 \setlength{\parskip}{0pt}
 
-% ---------- Placeholder macros ----------
-\newif\ifshowplaceholders \showplaceholderstrue
-\ifshowplaceholders
-  \newcommand{\res}[1][]{\textcolor{BrickRed}{\textbf{[RESULT\if\relax\detokenize{#1}\relax\else: #1\fi]}}}
-  \newcommand{\rs}{\textcolor{BrickRed}{\textbf{[RES]}}}
-  \newcommand{\decide}[1]{\textcolor{RoyalBlue}{\textbf{[DECIDE: #1]}}}
-  \newcommand{\chk}[1]{\textcolor{BurntOrange}{\textbf{[CHECK: #1]}}}
-  \newcommand{\writehere}[1]{\textcolor{OliveGreen}{\textbf{[WRITE: #1]}}}
-  \newcommand{\lnk}[1]{\textcolor{Plum}{\textbf{[LINK: #1]}}}
-\else
-  \newcommand{\rs}{??}\newcommand{\res}[1][]{??}\newcommand{\decide}[1]{??}\newcommand{\chk}[1]{??}
-  \newcommand{\writehere}[1]{??}\newcommand{\lnk}[1]{??}
-\fi
-% Grey box for a figure that does not exist yet.
-\newcommand{\figph}[2][1.35in]{%
-  \begin{center}\fbox{\parbox[c][#1][c]{0.92\linewidth}{\centering\textcolor{gray}{\textbf{FIGURE PLACEHOLDER}}\\[3pt]\footnotesize #2}}\end{center}}
 \newcommand{\code}[1]{\texttt{#1}}
 \newcommand{\FS}{\code{forget\_suppression}}
 \newcommand{\FJ}{\code{judge\_forget\_suppression}}
@@ -46,9 +28,6 @@
 \twocolumn[{%
 \maketitle
 \vspace{-1.2em}
-\begin{center}
-\fbox{\parbox{0.95\textwidth}{\small\textbf{Draft with real results.} Red \res{} marks what is still pending (CircuitKIT and head-ablation analyses); purple \lnk{link} marks a URL or release tag that does not exist yet.}}
-\end{center}
 \begin{abstract}
 \noindent Unlearning should remove designated knowledge, but lower accuracy on direct questions does not show the knowledge is gone. We audit Representation Misdirection for Unlearning (RMU) on Tiny Aya, a 3.35B multilingual family, with SafeTune and AuditKIT. We inject fictitious authors from the Task of Fictitious Unlearning (TOFU) benchmark (\code{forget01}, 40 pairs) into Tiny Aya Global with LoRA, unlearn with RMU at layer 18 (updating layers 16--18), and repeat on Earth, Fire, Water and Base.
 \emph{Method contribution.} Standard RMU did nothing here. A 360-token system preamble, plus attention-sink tokens, dominates the forget loss, which stayed flat near 3.5. Four unmasked settings left forget ROUGE-L (answer overlap) at 0.92--0.97, versus 0.97 injected. Masking the forget loss to first-user-turn tokens ($\alpha=100$, steering coefficient 20, 80 steps) lowers it to 0.32.
@@ -141,7 +120,7 @@ Unmasked & 100 & $5\mathrm{e}{-4}$ & 3.52$\to$3.49 & 0.921 & 0.675 & 0.632\\
 % ======================================================
 \section{Experimental Setup}
 \label{sec:setup}
-\paragraph{Pipeline and runs.} The pipeline runs inject $\rightarrow$ verify $\rightarrow$ unlearn $\rightarrow$ eval $\rightarrow$ probes $\rightarrow$ interp $\rightarrow$ relearn, and it logs every query under a stable case identifier, so before and after scores pair the same questions. The Global run reuses the injected checkpoint of an earlier run whose RMU step was unmasked; we copied its pre-RMU numbers and recomputed everything after RMU. Earth, Fire and Water ran the full pipeline once each with seed 42. Global seeds 43 and 44 also ran the full pipeline from a fresh injection; the seed sets the trainer, the injection shuffle and the RMU sampling, and the judge seed is fixed. Seeds 43 and 44 differ from the seed-42 Global run (and from Earth, Fire and Water) in running the primary judge only, so they have no agreement statistics, and in having no interpretability stage; like Earth, Fire and Water they score 20 utility questions per set, relearning at steps $\{0,10,30\}$ and 3 probe splits. Tiny Aya Base failed the injection gate twice because of a prompt-format bug (Section~\ref{sec:limits}). A corrected run with a \code{plain\_template} option, which applies the training format (\code{User:}/\code{Assistant:} text) at injection, evaluation and unlearning, passed the gate and then ran unlearn, evaluation, probes and relearning, with the primary judge only, 20 utility questions per set, relearning at steps $\{0,10,30\}$, 3 probe splits and no interpretability stage. The logit lens is analyzed on Global seed 42 only (Section~\ref{sec:lens}), and Appendix~\ref{app:patch} reports an activation-patching rerun with controls on 10 facts of one author. Head-ablation and CircuitKIT artifacts exist for Global but are not analyzed in this version, and we leave them to future work \res[pending analysis].
+\paragraph{Pipeline and runs.} The pipeline runs inject $\rightarrow$ verify $\rightarrow$ unlearn $\rightarrow$ eval $\rightarrow$ probes $\rightarrow$ interp $\rightarrow$ relearn, and it logs every query under a stable case identifier, so before and after scores pair the same questions. The Global run reuses the injected checkpoint of an earlier run whose RMU step was unmasked; we copied its pre-RMU numbers and recomputed everything after RMU. Earth, Fire and Water ran the full pipeline once each with seed 42. Global seeds 43 and 44 also ran the full pipeline from a fresh injection; the seed sets the trainer, the injection shuffle and the RMU sampling, and the judge seed is fixed. Seeds 43 and 44 differ from the seed-42 Global run (and from Earth, Fire and Water) in running the primary judge only, so they have no agreement statistics, and in having no interpretability stage; like Earth, Fire and Water they score 20 utility questions per set, relearning at steps $\{0,10,30\}$ and 3 probe splits. Tiny Aya Base failed the injection gate twice because of a prompt-format bug (Section~\ref{sec:limits}). A corrected run with a \code{plain\_template} option, which applies the training format (\code{User:}/\code{Assistant:} text) at injection, evaluation and unlearning, passed the gate and then ran unlearn, evaluation, probes and relearning, with the primary judge only, 20 utility questions per set, relearning at steps $\{0,10,30\}$, 3 probe splits and no interpretability stage. The logit lens is analyzed on Global seed 42 only (Section~\ref{sec:lens}), and Appendix~\ref{app:patch} reports an activation-patching rerun with controls on 10 facts of one author. Head-ablation and CircuitKIT artifacts exist for Global but are not analyzed in this version, and we leave them to future work.
 
 \paragraph{Aya Expanse 8B run.} As a cross-model case we ran one job on \code{CohereLabs/\allowbreak aya-expanse-8b} (about 8B parameters, 2.4 times Tiny Aya's 3.35B; 32 layers, $d_\text{model}=4096$) with inject, verify, unlearn, eval and relearn, and no probes or interpretability stages. Injection, RMU and evaluation settings are Tiny Aya Global's, carried over unchanged. Nothing was tuned on Expanse: layer 18 with update layers 16--18 (18 of 32 layers here, 18 of 36 on Tiny Aya), $\alpha=100$, $c=20$, learning rate $5\times10^{-4}$, 80 steps and the content mask. The mask starts at token 1 here and at token 359 on Tiny Aya. Only the model, 20 instead of 40 utility questions, relearning steps $\{0,10,30\}$ and the omitted stages differ (Table~\ref{tab:cfg}). No sweep ran. The secondary judge did not run either, so Expanse has no agreement statistics. A host hang interrupted the job during relearning (exit code 137) after inject, verify, unlearn and eval had finished; relearning alone was rerun from the same RMU checkpoint and exited normally. The runs are \code{20261114T061138Z-\allowbreak inject+verify+unlearn+\allowbreak eval+relearn--6d3be84b} and \code{20261114T151251Z-\allowbreak relearn-6d3be84b}.
 
@@ -546,11 +525,11 @@ The forget set is synthetic: TOFU's fictitious authors contain no real personal 
 \section{Reproducibility}
 \label{sec:repro}
 \begin{itemize}
-  \item Code at \lnk{GitHub repository}, at the tagged release \lnk{release tag}, with configurations for the main run, the variants, the sweep, the Base job and the Expanse job.
-  \item Data from TOFU (\code{forget01}, \code{retain99}, \code{forget01\_perturbed}, \code{world\_facts}, \code{real\_authors}), plus translations and review sheet \lnk{} and constructed prompts \lnk{}; each artifact's license is in Section~\ref{sec:ethics}.
+  \item Code at \href{https://github.com/mso-docs/Lexsi-Unlearning}{\nolinkurl{github.com/mso-docs/Lexsi-Unlearning}} (main branch), with configurations for the main run, the variants, the sweep, the Base job and the Expanse job.
+  \item Data from TOFU (\code{forget01}, \code{retain99}, \code{forget01\_perturbed}, \code{world\_facts}, \code{real\_authors}), plus translations, the review sheet and constructed prompts in the dataset \href{https://huggingface.co/datasets/mackenzietechdocs/lexsi-unlearning-eval}{\nolinkurl{huggingface.co/datasets/mackenzietechdocs/lexsi-unlearning-eval}}; each artifact's license is in Section~\ref{sec:ethics}.
   \item Seeds: 42 for every run and 42, 43 and 44 for Global. The seed sets the trainer, the injection shuffle and the RMU sampling; the judge seed is fixed (20261112).
-  \item Artifacts are the adapter \lnk{}, unlearned checkpoints \lnk{} (CC-BY-NC-4.0, non-commercial), probe states \lnk{}, traces and generations \lnk{}. Gated base weights are not redistributed.
-  \item Tools are SafeTune 0.1.18 (RMU), AuditKIT 1.1.11 (scoring) and CircuitKIT 0.2.3 (EAP-IG; run on Global, not analyzed in this version). They ran in one container image (built 2026-11-12, image ID sha256:a2ea1f2be522) with Python 3.12.3, PyTorch 2.15.0a0+875d815502 (NVIDIA build 26.10, CUDA 13.4), Transformers 5.22.2, PEFT 0.21.2, Accelerate 1.15.0, TRL 1.14.2, Datasets 4.7.0, Hugging Face Hub 1.33.0, scikit-learn 1.9.1 and NumPy 2.1.0. ROUGE-L recall is our own implementation and the judge clients use the Python standard library (\code{urllib}). Judges are \code{qwen3.5:35b} (Ollama; the server version was not recorded) and \code{moonshotai/kimi-k3} (OpenRouter), with verdict logs \lnk{}.
+  \item Artifacts are the unlearned checkpoints in the \href{https://huggingface.co/mackenzietechdocs/lexsi-tiny-aya-global-rmu}{Global RMU model repo}, with Earth, Fire and Water counterparts under the same namespace (CC-BY-NC-4.0, non-commercial), plus probe states, traces, generations and verdict logs in the same dataset. Gated base weights are not redistributed.
+  \item Tools are SafeTune 0.1.18 (RMU), AuditKIT 1.1.11 (scoring) and CircuitKIT 0.2.3 (EAP-IG; run on Global, not analyzed in this version). They ran in one container image (built 2026-11-12, image ID sha256:a2ea1f2be522) with Python 3.12.3, PyTorch 2.15.0a0+875d815502 (NVIDIA build 26.10, CUDA 13.4), Transformers 5.22.2, PEFT 0.21.2, Accelerate 1.15.0, TRL 1.14.2, Datasets 4.7.0, Hugging Face Hub 1.33.0, scikit-learn 1.9.1 and NumPy 2.1.0. ROUGE-L recall is our own implementation and the judge clients use the Python standard library (\code{urllib}). Judges are \code{qwen3.5:35b} (Ollama; the server version was not recorded) and \code{moonshotai/kimi-k3} (OpenRouter).
 \end{itemize}
 
 \bibliographystyle{unsrt}
