@@ -26,7 +26,7 @@
 
 \hypersetup{
   pdftitle={Unlearning vs. Hiding: Does Unlearning Remove Knowledge or Just Suppress Its Expression?},
-  pdfauthor={Mackenzie O'Brien},
+  pdfauthor={Mackenzie O'Brien, Mac Labs AI},
   pdfsubject={Lexsi AI Safety and Alignment Hackathon, Track 2b: Safety and Alignment},
   pdfkeywords={},
   pdfcreator={LaTeX Beamer},
@@ -50,8 +50,8 @@
 \title{Unlearning vs.\ Hiding}
 \subtitle{Does unlearning remove knowledge or just suppress its expression?\\[2pt]
 \small An audit of Representation Misdirection for Unlearning (RMU) on Tiny Aya (3.35B)}
-\author{Mackenzie O'Brien}
-\institute{Mac Labs AI \textbullet{} Lexsi AI Safety and Alignment Hackathon \textbullet{} Track 2b: Safety and Alignment \textbullet{} Problem statement 7 (Unlearning)}
+\author{Mackenzie O'Brien, Mac Labs AI}
+\institute{Lexsi AI Safety and Alignment Hackathon \textbullet{} Track 2b: Safety and Alignment \textbullet{} Problem statement 7 (Unlearning)}
 \date[November 2026]{November 2026}
 
 \begin{document}
@@ -63,12 +63,12 @@
 \item Title follows the paper: "Unlearning vs. Hiding: Does Unlearning Remove Knowledge or Just Suppress Its Expression?"
 \item Solo project, Track 2b (Safety and Alignment), problem statement 7 (Unlearning).
 \item One line: we audit Representation Misdirection for Unlearning (RMU) on Tiny Aya, a 3.35B multilingual model family, using Lexsi's SafeTune and AuditKIT.
-\item Short answer up front: output-level suppression across three variants; we do not claim erasure.
+\item Short answer up front: output-level suppression on the four instruction-tuned Tiny Aya variants, with weak evidence of residual knowledge; the same settings failed on Base and only partly worked on Aya Expanse 8B. We do not claim erasure.
 \end{itemize}}
 
 % ======================================================================
 \begin{frame}{The problem: removing knowledge or hiding it?}
-\small
+\footnotesize
 \begin{columns}[T]
 \begin{column}{0.50\textwidth}
 \textbf{Why it matters}
@@ -81,9 +81,9 @@
 \begin{column}{0.46\textwidth}
 \textbf{What we do}
 \begin{itemize}
-\item Inject 40 fictitious author facts from the Task of Fictitious Unlearning (TOFU) benchmark into Tiny Aya Global with Low-Rank Adaptation (LoRA).
-\item Unlearn them with RMU.
-\item Test it under paraphrase, format change, extraction, 8 languages, probes and relearning.
+\item Inject 40 Task of Fictitious Unlearning (TOFU) facts into Tiny Aya Global with Low-Rank Adaptation (LoRA); repeat on Earth, Fire, Water and Base.
+\item Unlearn with RMU; one cross-model case on Aya Expanse 8B with the same settings, not tuned.
+\item Test under paraphrase, format change, extraction, eight languages, probes, a logit lens and relearning.
 \end{itemize}
 \end{column}
 \end{columns}
@@ -107,8 +107,8 @@ Lower accuracy on direct questions does not show that the knowledge is gone.
 \textbf{Research questions (RQ)}
 \begin{enumerate}
 \item[\textbf{RQ1}] How complete is behavioral forgetting under direct, paraphrased, reformatted, extraction-style and translated questions, and what does it cost on retain and general-capability questions?
-\item[\textbf{RQ2}] Is the knowledge still recoverable? Do held-out probes, or relearning, give evidence of residual knowledge?
-\item[\textbf{RQ3}] Do the answers differ across Tiny Aya variants and RMU settings?
+\item[\textbf{RQ2}] Is the knowledge still recoverable? Do held-out probes, a logit-lens readout of the answer token, or relearning give evidence of residual knowledge?
+\item[\textbf{RQ3}] Do the answers differ across Tiny Aya variants, RMU settings and one larger model?
 \end{enumerate}
 \end{column}
 \begin{column}{0.49\textwidth}
@@ -116,9 +116,9 @@ Lower accuracy on direct questions does not show that the knowledge is gone.
 \textbf{Contributions, in order}
 \begin{enumerate}
 \item \textbf{Masked-forget-loss RMU}: unmasked RMU barely forgets on Tiny Aya; masking the shared preamble and attention-sink positions fixes it.
-\item \textbf{One protocol across Tiny Aya variants} (Global, Earth, Fire).
-\item \textbf{Multilingual leakage paired with internal tests} (held-out probes with a base-model control, relearning).
-\item \textbf{Mid-depth RMU} (layers 16--18 of 36), a relearning curve and prevalence-insensitive judge-agreement statistics.
+\item \textbf{One protocol across Tiny Aya variants}: Global (three seeds), Earth, Fire, Water and Base, plus one Aya Expanse 8B case.
+\item \textbf{Multilingual leakage paired with internal tests} (held-out probes with a base-model control, relearning, and a logit-lens readout).
+\item \textbf{Mid-depth RMU} (layers 16--18 of 36), a relearning curve and prevalence-insensitive judge agreement.
 \end{enumerate}
 \end{column}
 \end{columns}
@@ -154,7 +154,7 @@ Lower accuracy on direct questions does not show that the knowledge is gone.
   \node[st] (ml)  at (10.05,-2.3) {\textbf{5. Multilingual eval}\\forget questions in\\8 languages};
   \node[st] (pr)  at (6.7,-2.3)   {\textbf{6. Linear probes}\\held out, with\\base-model control};
   \node[st] (rl)  at (3.35,-2.3)  {\textbf{7. Relearning}\\30 steps,\\8 facts per arm};
-  \node[st] (int) at (0,-2.3)     {\textbf{8. Interpretability}\\artifacts on Global;\\not analyzed yet};
+  \node[st] (int) at (0,-2.3)     {\textbf{8. Interpretability}\\logit lens analyzed\\on Global seed 42};
   \node[tg,fill=auditcol] (tml) at (ml.south) {AuditKIT};
   \node[tg,fill=stdcol] (tpr) at (pr.south) {custom};
   \node[tg,fill=stdcol] (trl) at (rl.south) {standard: HF Trainer};
@@ -171,7 +171,7 @@ Lower accuracy on direct questions does not show that the knowledge is gone.
     \node[lg,fill=stdcol] (l4) at (8.0,0) {}; \node[anchor=west] at (l4.east) {custom or standard};
   \end{scope}
   \node[font=\tiny,align=center,text width=12.5cm] at (5.025,-4.4)
-    {HF PEFT: Hugging Face Parameter-Efficient Fine-Tuning library.\\ CircuitKIT ran edge attribution patching with integrated gradients (EAP-IG) on Global; its circuits are not analyzed in this version.\\
+    {HF PEFT: Hugging Face Parameter-Efficient Fine-Tuning library. Logit lens analyzed on Global seed 42; CircuitKIT (EAP-IG) ran on Global, not analyzed in this version.\\
      Grading: \code{qwen3.5:35b} primary judge; Kimi K3 re-grades a seeded 15\% sample.};
 \end{tikzpicture}
 \note{
@@ -183,7 +183,7 @@ Lower accuracy on direct questions does not show that the knowledge is gone.
 \item 4--5: scoring with Lexsi's AuditKIT: direct, paraphrase, cloze, true/false and extraction prompts, plus translation into 8 languages.
 \item 6: custom held-out linear probes with a base-model control.
 \item 7: relearning with the standard Transformers Trainer, 30 steps.
-\item 8: logit-lens, patching, head-ablation and CircuitKIT (edge attribution patching with integrated gradients, EAP-IG) artifacts exist for Global but are not analyzed in this version; we report nothing from them.
+\item 8: the logit lens is analyzed on Global seed 42; an activation-patching rerun is reported in the paper's appendix. Head-ablation and CircuitKIT (edge attribution patching with integrated gradients, EAP-IG) artifacts exist for Global but are not analyzed in this version.
 \end{itemize}}
 \end{frame}
 
@@ -233,10 +233,11 @@ Unmasked & 100 & 5e-4 & 3.52$\to$3.49 & 0.921 & 0.675 & 0.632\\
 \begin{column}{0.31\textwidth}
 \textbf{Model and data}
 \begin{itemize}
-\item Tiny Aya Global: 3.35B parameters, 70 languages, 36 layers, bfloat16; Earth and Fire share the architecture
+\item Tiny Aya Global, 3.35B, 70 languages, 36 layers; Earth, Fire and Water share the architecture; Base is not instruction-tuned
+\item Cross-model case: Aya Expanse 8B (32 layers), same RMU settings, not tuned
 \item Forget: TOFU forget01, 40 pairs, two fictitious authors
 \item Retain: first 3,600 retain99 rows for training; 64 rows scored
-\item Utility: TOFU world\_facts and real\_authors (40 / 20 / 20 items)
+\item Utility: TOFU world\_facts and real\_authors (40 on Global seed 42, 20 otherwise)
 \end{itemize}
 \end{column}
 \begin{column}{0.27\textwidth}
@@ -268,20 +269,20 @@ RMU lr / steps & 5e-4 / 80 \\
 Decoding & greedy, $\le$64 new tokens \\
 Probe & logistic, held out (70/30) \\
 Relearning & 30 steps, lr 2e-4, batch 1 \\
-Seeds & 42 only \\
+Seeds & 42; Global also 43, 44 \\
 \bottomrule
 \end{tabular}\\[4pt]
-\tiny Compute: single workstation graphics processing unit (GPU), 128\,GB unified memory, about 2.1 hours per variant job. Secondary judge: 860 calls, mean \$0.00106 per call (\$0.91 total).
+\tiny Compute: one workstation GPU, 128\,GB unified memory, about 2.1 hours per Tiny Aya variant. Secondary judge: 1{,}074 calls, \$1.14 total (seeds 43--44, Base and Expanse: none).
 \end{column}
 \end{columns}
 \note{
 \begin{itemize}
-\item Model: Tiny Aya Global, instruction-tuned, 70 languages, 3.35B parameters, 36 decoder layers, run in bfloat16 with its chat template.
+\item Models: Tiny Aya Global, instruction-tuned, 70 languages, 3.35B parameters, 36 decoder layers, run in bfloat16 with its chat template; the same protocol on Earth, Fire, Water and Base. One cross-model case on Aya Expanse 8B (about 8B parameters, 32 layers) with the Tiny Aya settings carried over unchanged.
 \item Data: TOFU forget01 (40 pairs, two fictitious authors); the first 3,600 of 3,960 retain99 rows (leaving 18 authors held out for the relearning control); retain accuracy on the first 64 retain rows; paraphrases are the official forget01\_perturbed questions.
 \item Tooling: SafeTune for RMU, AuditKIT for scoring; CircuitKIT ran edge attribution patching with integrated gradients (EAP-IG) on Global but is not analyzed in this version. Low-Rank Adaptation (LoRA) injection uses Hugging Face Parameter-Efficient Fine-Tuning (HF PEFT) with the Transformers Trainer; relearning uses the Trainer.
 \item Headline metric: judge forget suppression, one minus the primary judge's match rate on forget prompts, that is, the fraction of injected facts the output does not reveal. Missing judgments are counted, not scored as zero.
-\item Judges: qwen3.5:35b served locally (temperature 0, JavaScript Object Notation, JSON, verdict); Kimi K3 re-grades a seeded 15\% sample with the same rubric. 860 logged secondary-judge calls at a mean of \$0.00106 per call, \$0.91 total.
-\item One seed (42) per run.
+\item Judges: qwen3.5:35b served locally (temperature 0, JavaScript Object Notation, JSON, verdict); Kimi K3 re-grades a seeded 15\% sample with the same rubric. 1{,}074 logged secondary-judge calls at a mean of \$0.00106 per call, \$1.14 total. Global seeds 43 and 44, Base and Expanse used the primary judge only.
+\item Seed 42 for every run, and seeds 42, 43 and 44 for Global.
 \end{itemize}}
 \end{frame}
 
@@ -308,7 +309,7 @@ Seeds & 42 only \\
 \legend{before RMU, after RMU}
 \end{axis}
 \end{tikzpicture}\\
-{\tiny Global, $n=40$ per format; Translated pools 8 languages ($n=320$). Values from the paper's main table.\par}
+{\tiny Global seed 42, $n=40$ per format; Translated pools 8 languages ($n=320$). Values from the paper's main table. Across seeds 42--44 the mean direct suppression is 0.034 to 0.917.\par}
 \end{column}
 \begin{column}{0.40\textwidth}
 \scriptsize
@@ -317,13 +318,13 @@ Seeds & 42 only \\
 \item After RMU, Wilson 95\% intervals: direct 0.71--0.93; paraphrase and extraction 0.83--0.99; translated 0.89--0.95.
 \item Substring recall on direct questions: 0.825 $\to$ 0.000.
 \item Translation had little headroom: 0.706 before RMU, so the pooled gain is 0.22.
-\item Weakest format: true/false (0.625).
+\item Weakest format: true/false (0.625). Across seeds 42--44 the mean direct suppression is 0.034 to 0.917 (range after RMU 0.850--0.975); seed 42's 0.85 is the lowest of the three.
 \end{itemize}
 \end{column}
 \end{columns}
 \note{
 \begin{itemize}
-\item Judge forget suppression on Global rises from 0.025 to 0.85 on direct questions, 0.45 to 0.95 on paraphrases and 0.125 to 0.95 on extraction prompts (n = 40 each), and from 0.706 to 0.925 on the pooled translated prompts (n = 320).
+\item Judge forget suppression on Global seed 42 rises from 0.025 to 0.85 on direct questions, 0.45 to 0.95 on paraphrases and 0.125 to 0.95 on extraction prompts (n = 40 each), and from 0.706 to 0.925 on the pooled translated prompts (n = 320). Across seeds 42--44 the means are 0.034 to 0.917 (direct), 0.333 to 0.950 (paraphrase), 0.075 to 0.950 (extraction) and 0.706 to 0.926 (translated).
 \item Wilson 95\% intervals after RMU, as reported in the paper: 0.71--0.93 (direct), 0.83--0.99 (paraphrase and extraction), 0.89--0.95 (translated). With 40 questions one item moves a rate by 2.5 points.
 \item Suppression after RMU is higher on paraphrase and extraction than on direct questions; the paper says this was not expected and is not explained.
 \item Cloze 0.100 to 0.850 and true/false 0.225 to 0.625 are split from one 80-item bucket using item-level verdicts.
@@ -357,88 +358,89 @@ Seeds & 42 only \\
 \centering
 \tiny
 \setlength{\tabcolsep}{3pt}
-\begin{tabular}{@{}lcccccc@{}}
+\begin{tabular}{@{}lcccccccc@{}}
 \toprule
-& \multicolumn{2}{c}{Global} & \multicolumn{2}{c}{Earth} & \multicolumn{2}{c}{Fire}\\
-\cmidrule(lr){2-3}\cmidrule(lr){4-5}\cmidrule(lr){6-7}
-Lang. & bef. & aft. & bef. & aft. & bef. & aft.\\
+& \multicolumn{2}{c}{Global} & \multicolumn{2}{c}{Earth} & \multicolumn{2}{c}{Fire} & \multicolumn{2}{c}{Water}\\
+\cmidrule(lr){2-3}\cmidrule(lr){4-5}\cmidrule(lr){6-7}\cmidrule(lr){8-9}
+Lang. & bef. & aft. & bef. & aft. & bef. & aft. & bef. & aft.\\
 \midrule
-es & 0.575 & 0.925 & 0.625 & 0.950 & 0.675 & 0.875\\
-fr & 0.550 & 0.950 & 0.600 & 0.975 & 0.675 & 0.950\\
-de & 0.625 & 0.950 & 0.500 & 0.925 & 0.575 & 0.975\\
-hi & 0.750 & 0.872$^\ast$ & 0.700 & 0.875 & 0.850 & 0.825\\
-ar & 0.750 & 0.950 & 0.875 & 0.925 & 0.700 & 0.900\\
-zh & 0.775 & 0.925 & 0.850 & 0.950 & 0.700 & 0.975\\
-sw & 0.750 & 0.900 & 0.725 & 0.950 & 0.675 & 0.925\\
-ja & 0.875 & 0.925 & 0.850 & 0.925 & 0.825 & 0.975\\
+es & 0.575 & 0.925 & 0.625 & 0.950 & 0.675 & 0.875 & 0.600 & 0.975\\
+fr & 0.550 & 0.950 & 0.600 & 0.975 & 0.675 & 0.950 & 0.625 & 0.950\\
+de & 0.625 & 0.950 & 0.500 & 0.925 & 0.575 & 0.975 & 0.550 & 1.000\\
+hi & 0.750 & 0.872$^\ast$ & 0.700 & 0.875 & 0.850 & 0.825 & 0.775 & 0.950\\
+ar & 0.750 & 0.950 & 0.875 & 0.925 & 0.700 & 0.900 & 0.825 & 0.875\\
+zh & 0.775 & 0.925 & 0.850 & 0.950 & 0.700 & 0.975 & 0.750 & 0.975\\
+sw & 0.750 & 0.900 & 0.725 & 0.950 & 0.675 & 0.925 & 0.700 & 0.950\\
+ja & 0.875 & 0.925 & 0.850 & 0.925 & 0.825 & 0.975 & 0.750 & 0.950\\
 \bottomrule
 \end{tabular}\\[2pt]
-{\tiny 40 questions per language. $^\ast$39 of 40 Hindi items judged.}\\[4pt]
+{\tiny 40 questions per language. Global is seed 42. $^\ast$39 of 40 Hindi items judged.}\\[2pt]
 \scriptsize
-\begin{itemize}
-\item Unlearning transferred to all 8 languages: at least 0.87 everywhere except Fire on Hindi (0.825).
-\item Hindi is the weakest language after RMU in all three variants.
+\begin{itemize}\setlength{\itemsep}{2pt}
+\item On the instruction-tuned variants, unlearning transferred to all 8 languages (at least 0.85 everywhere except Fire on Hindi, 0.825).
+\item Hindi is weakest in Global seed 42, Earth and Fire, but not systematically (Water 0.950; Arabic 0.875). We do not interpret the Fire result.
 \end{itemize}
 \end{column}
 \end{columns}
 \note{
 \begin{itemize}
 \item Forget questions machine-translated into Spanish, French, German, Hindi, Arabic, Chinese, Swahili and Japanese, used only as queries; a native-speaker check of the translations is still pending.
-\item English-only unlearning of English-injected facts transferred to all eight languages, with judged suppression after RMU of at least 0.87 everywhere except Fire on Hindi (0.825).
+\item On the instruction-tuned variants, English-only unlearning of English-injected facts transferred to all eight languages, with judged suppression after RMU of at least 0.85 in every language of every run except Fire on Hindi (0.825). Hindi is not systematically weak (Water 0.950; Arabic is lowest there at 0.875). With 40 questions per language we do not interpret the Fire result.
 \item Before RMU the injected model already withheld the fact on 71\% of translated prompts (Spanish 0.575, French 0.55, Japanese 0.875 on Global), so headroom is small.
-\item In Fire, the South Asian variant, Hindi suppression did not rise (0.850 to 0.825). With one language, 40 questions and one run, the paper does not interpret that.
+\item In Fire, the South Asian variant, Hindi suppression did not rise (0.850 to 0.825). Base is the exception to the transfer: after RMU, six of the eight languages remain below 0.75, and Spanish is 0.300.
 \item Farashah et al. (Multilingual Amnesia) report mostly language-specific forgetting, but the setups differ: they unlearn in each language with gradient-based objectives on an 8B model.
 \end{itemize}}
 \end{frame}
 
 % ======================================================================
 \begin{frame}{Results: utility cost and format-change leakage (RQ1)}
-\begin{columns}[T]
-\begin{column}{0.52\textwidth}
-\textbf{\small Judged accuracy on non-forget facts}\\[3pt]
+\centering
+\textbf{\small Judged accuracy on non-forget facts}\\[2pt]
 \tiny
-\setlength{\tabcolsep}{3pt}
-\begin{tabular}{@{}lcccccc@{}}
+\setlength{\tabcolsep}{4pt}
+\begin{tabular}{@{}lcccccccc@{}}
 \toprule
-& \multicolumn{2}{c}{Global} & \multicolumn{2}{c}{Earth} & \multicolumn{2}{c}{Fire}\\
-\cmidrule(lr){2-3}\cmidrule(lr){4-5}\cmidrule(lr){6-7}
-& bef. & aft. & bef. & aft. & bef. & aft.\\
+& \multicolumn{2}{c}{Global} & \multicolumn{2}{c}{Earth} & \multicolumn{2}{c}{Fire} & \multicolumn{2}{c}{Water}\\
+\cmidrule(lr){2-3}\cmidrule(lr){4-5}\cmidrule(lr){6-7}\cmidrule(lr){8-9}
+& bef. & aft. & bef. & aft. & bef. & aft. & bef. & aft.\\
 \midrule
-Retain (64) & 0.516 & 0.422 & 0.562 & 0.516 & 0.531 & 0.500\\
-World facts (40/20/20) & 0.875 & 0.850 & 0.900 & 0.900 & 0.900 & 0.900\\
-Real authors (40/20/20) & 0.825 & 0.775 & 1.000 & 1.000 & 0.950 & 0.950\\
+Retain (64) & 0.516 & 0.422 & 0.562 & 0.516 & 0.531 & 0.500 & 0.516 & 0.484\\
+World facts & 0.875 & 0.850 & 0.900 & 0.900 & 0.900 & 0.900 & 0.900 & 0.900\\
+Real authors & 0.825 & 0.775 & 1.000 & 1.000 & 0.950 & 0.950 & 0.900 & 0.850\\
 \bottomrule
-\end{tabular}\\[5pt]
+\end{tabular}\\[1pt]
+{\tiny Global is seed 42 (40 utility questions); Earth, Fire and Water use 20 each.}
+\begin{columns}[T]
+\begin{column}{0.50\textwidth}
 \scriptsize
-\begin{itemize}
-\item Retain falls 9.4 points on Global (Wilson 95\%: 0.40--0.63 before, 0.31--0.54 after), 4.7 on Earth, 3.1 on Fire.
-\item Within sampling noise for one variant, but the same sign in all three runs, so we report it as a real cost.
+\begin{itemize}\setlength{\itemsep}{2pt}
+\item Retain falls 9.4 points on Global seed 42 (Wilson 95\%: 0.40--0.63 before, 0.31--0.54 after), 4.7 on Earth, 3.1 on Fire and 3.1 on Water. Across seeds 42--44 the mean is 5.2 points (range 1.6--9.4).
+\item Any single run is within sampling noise, but the drop has the same sign in all six instruction-tuned runs, so we report it as a real but small cost.
 \end{itemize}
 \end{column}
-\begin{column}{0.46\textwidth}
-\textbf{\small Leakage under format change}\\[3pt]
+\begin{column}{0.48\textwidth}
+\textbf{\small Leakage under format change}\\[2pt]
 \tiny
 \setlength{\tabcolsep}{3pt}
-\begin{tabular}{@{}lcccccc@{}}
+\begin{tabular}{@{}lcccccccc@{}}
 \toprule
-Substring recall & \multicolumn{2}{c}{Global} & \multicolumn{2}{c}{Earth} & \multicolumn{2}{c}{Fire}\\
+Substring & \multicolumn{2}{c}{Global} & \multicolumn{2}{c}{Earth} & \multicolumn{2}{c}{Fire} & \multicolumn{2}{c}{Water}\\
 \midrule
-Cloze + T/F pooled & 0.663 & 0.325 & 0.738 & 0.300 & 0.725 & 0.400\\
+Cloze + T/F & 0.663 & 0.325 & 0.738 & 0.300 & 0.725 & 0.400 & 0.625 & 0.300\\
 \bottomrule
-\end{tabular}\\[5pt]
-\scriptsize
-\begin{itemize}
-\item Global substring recall after RMU: 0 on direct, paraphrase and extraction; 0.325 on the pooled cloze and true/false (T/F) bucket.
-\item Cloze recall is 0 after RMU; T/F carries the leak (substring recall 0.65; judge suppression 0.625).
-\item Pooled judge suppression 0.74 (Wilson 95\%: 0.63--0.82); T/F 0.625 (0.47--0.76).
-\item No base-model reference on this format.
+\end{tabular}\\[1pt]
+{\tiny Global seed 42; seeds 43 and 44 after RMU: 0.438 and 0.300.}
+\tiny
+\begin{itemize}\setlength{\itemsep}{1pt}\setlength{\parsep}{0pt}
+\item After RMU, Global seed 42 substring recall is 0 on direct, paraphrase and extraction; 0.325 on cloze+T/F (cloze 0; T/F leak: substring 0.65, judge 0.625).
+\item Pooled judge 0.74 (Wilson 95\%: 0.63--0.82). Seeds 42--44: pooled 0.74--0.83, T/F 0.63--0.75. No base-model reference.
 \end{itemize}
 \end{column}
 \end{columns}
 \note{
 \begin{itemize}
-\item Utility: judged retain accuracy falls by 9.4 points on Global (0.516 to 0.422; Wilson 95\% intervals 0.40--0.63 before and 0.31--0.54 after, n = 64), 4.7 on Earth and 3.1 on Fire.
-\item Global world facts fall 2.5 points and real authors 5.0 points (n = 40 each); Earth and Fire are unchanged on 20 items each.
+\item Utility: judged retain accuracy falls by 9.4 points on Global seed 42 (0.516 to 0.422; Wilson 95\% intervals 0.40--0.63 before and 0.31--0.54 after, n = 64), 4.7 on Earth, 3.1 on Fire and 3.1 on Water (0.516 to 0.484). Across Global seeds 42--44 the mean drop is 5.2 points (range 1.6--9.4).
+\item Global seed 42 world facts fall 2.5 points and real authors 5.0 points (n = 40 each). On 20 items each, Earth and Fire are unchanged, Water world facts are unchanged (0.900) and its real authors fall from 0.900 to 0.850 (one question).
 \item Retain facts were injected only partly (base model 0.0625, after injection 0.516), so the cost is measured on facts the model knew about half the time.
 \item Leakage: a true/false (T/F) prompt contains the correct statement, so a model that never learned the fact would accept some of them. Without a base-model reference on this format, we report it as residual leakage, not as a measured amount.
 \item Fire's true/false suppression after RMU (0.475) is the lowest cell in the paper's main table.
@@ -456,19 +458,19 @@ Cloze + T/F pooled & 0.663 & 0.325 & 0.738 & 0.300 & 0.725 & 0.400\\
 \begin{column}{0.42\textwidth}
 \scriptsize
 \begin{itemize}
-\item Logistic probes, scored by held-out AUROC.
-\item Forget-vs-retain probes decode at AUROC 0.98 from layer 1 and stay at 0.97--0.99 through layer 36 after RMU.
-\item \textbf{But} the base model that never saw the facts does the same: 0.981 (layer 1), 0.977 (layer 16), 0.973 (layer 18). Shuffled labels: 0.46--0.53.
+\item Forget-vs-retain probes decode at AUROC 0.98 from layer 1 on Global seed 42 and stay at 0.97--0.99 through layer 36 after RMU.
+\item Across six instruction-tuned runs the frozen post-RMU AUROC is 0.920--1.000 (0.865--0.997 on Base); the mid-layer dip is already present before RMU.
+\item \textbf{But} the uninjected base model does the same: 0.981 (layer 1), 0.977 (16), 0.973 (18). Shuffled labels: 0.46--0.53.
 \item Content probe: 0.96 after RMU at layer 18, 0.99 for the base-model refit.
-\item \textbf{Reading}: probes reflect surface differences (such as fictitious names), not stored facts. They are uninterpretable as knowledge retention.
+\item \textbf{Reading}: probes reflect surface differences (such as fictitious names), not stored facts, so they are uninterpretable as knowledge retention.
 \end{itemize}
 \end{column}
 \end{columns}
 \note{
 \begin{itemize}
-\item At each of the 37 residual positions we take the last non-padding token's activation; a logistic probe separates the 40 forget from the 64 retain questions. Numbers are held out (70/30 split, repeated 5 times on Global, 3 times on Earth and Fire). Metric: area under the receiver operating characteristic curve (AUROC).
+\item At each of the 37 residual positions we take the last non-padding token's activation; a logistic probe separates the 40 forget from the 64 retain questions. Numbers are held out (70/30 split, repeated 5 times on Global seed 42, 3 times on every other run). Metric: area under the receiver operating characteristic curve (AUROC).
 \item Frozen probes are fit on the post-injection model and applied after RMU; refit probes are fit on each model's own rows. Controls: base model before injection, and shuffled labels.
-\item Earth and Fire agree (base-model refit AUROC 0.994 at layer 1).
+\item Earth, Fire and Water agree (base-model refit AUROC 0.994, 0.994 and 0.991 at layer 1), as do Global seeds 43 and 44 (0.994 each). On Base the frozen post-RMU range is 0.865 (layer 15) to 0.997 (layer 24), and that same 0.865 minimum is already present before RMU.
 \item The probes do not show that facts survive RMU, and a lower score would not have shown erasure. Probes that compare a fact with its counterfactual, with the base-model control, would be needed.
 \end{itemize}}
 \end{frame}
@@ -479,7 +481,7 @@ Cloze + T/F pooled & 0.663 & 0.325 & 0.738 & 0.300 & 0.725 & 0.400\\
 \begin{column}{0.54\textwidth}
 \centering
 \includegraphics[width=\linewidth]{figures/fig_relearn.pdf}\\
-{\tiny Relearning on Global: substring recall on the 8 trained questions at each fine-tuning step.\par}\vspace{4pt}
+{\tiny Relearning on Global seed 42: substring recall on the 8 trained questions at each fine-tuning step.\par}\vspace{4pt}
 {\tiny\raggedright Arms: \textbf{RMU-old} = post-RMU model trained on the 8 forgotten facts; \textbf{RMU-new} = same model trained on 8 new fictitious authors; \textbf{Base-old} = never-injected base model trained on the 8 forgotten facts (acquisition reference, not a matched control).\par}
 \end{column}
 \begin{column}{0.44\textwidth}
@@ -489,28 +491,29 @@ Cloze + T/F pooled & 0.663 & 0.325 & 0.738 & 0.300 & 0.725 & 0.400\\
 \toprule
 Judge match, step 30 (of 8) & RMU-old & Base-old & RMU-new\\
 \midrule
-Global, trained & 5 & 7 & 4\\
+Global seed 42, trained & 5 & 7 & 4\\
+Global seed 43, trained & 7 & 7 & 4\\
+Global seed 44, trained & 7 & 4 & 6\\
 Earth, trained & 6 & 6 & 5\\
 Fire, trained & 6 & 8 & 5\\
-Global, held-out paraphrases & 3 & 3 & --\\
-Earth, held-out paraphrases & 2 & 4 & --\\
-Fire, held-out paraphrases & 6 & 2 & --\\
+Water, trained & 7 & 6 & 5\\
+Base, trained & 8 & 8 & 7\\
 \bottomrule
-\end{tabular}\\[4pt]
-\scriptsize
-\begin{itemize}
-\item Key comparison, RMU-old vs.\ RMU-new on Global: 5/8 vs.\ 4/8, one fact. Wilson 95\%: 0.31--0.86 and 0.22--0.78. Not significant.
-\item Base-old reaches 7/8 (0.53--0.98): no savings over learning from scratch.
-\item Weak, consistent evidence of residual knowledge at best.
+\end{tabular}\\[3pt]
+\tiny
+\begin{itemize}\setlength{\itemsep}{1pt}\setlength{\parsep}{0pt}
+\item On the judge, RMU-old vs.\ RMU-new is a gap of one to three facts in all six instruction-tuned runs ($n=8$). The runs reuse the same 8 facts; no single gap is significant.
+\item Comparison with the never-injected base is mixed (RMU ahead in two, behind in two, level in two). Weak evidence of residual knowledge at best.
+\item Base is excluded: at step 0 the RMU model already matched 7 of 8 trained facts.
 \end{itemize}
 \end{column}
 \end{columns}
 \note{
 \begin{itemize}
 \item 30 fine-tuning steps (learning rate 2e-4, batch size 1, one run per arm). RMU-old trains the post-RMU model on 8 forgotten facts; RMU-new trains a fresh copy of the same model on 8 new fictitious TOFU authors; base-old trains the never-injected base model on the 8 forgotten facts (an acquisition reference, not a matched control).
-\item On Global the RMU model recovers 5 of 8 forgotten facts (from 0 of 8) against 4 of 8 new facts. Earth and Fire show the same one-fact gap (6 against 5) on the same facts, so they are not independent replicates.
-\item At step 0 the trained-question counts are 0, 2 and 0 on Global (RMU-old, base-old, RMU-new).
-\item Held-out paraphrases are mixed.
+\item On the judge the RMU-old against RMU-new gap is positive in all six instruction-tuned runs: one fact for Global seed 42 (5 against 4), Earth (6 against 5), Fire (6 against 5) and Global seed 44 (7 against 6), two for Water (7 against 5) and three for Global seed 43 (7 against 4). The six runs reuse the same 8 forgotten and 8 new facts, so they are not independent replicates.
+\item At step 0 the trained-question counts are 0, 2 and 0 for Global seed 42 (RMU-old, base-old, RMU-new), 2, 2 and 0 for Earth, 1, 2 and 0 for Global seeds 43 and 44, Fire and Water, and 7, 2 and 0 for Base.
+\item Held-out paraphrases are mixed. The Expanse relearning run is uninformative (the RMU model already reproduced 7 of 8 forget answers at step 0 on those facts).
 \end{itemize}}
 \end{frame}
 
@@ -529,6 +532,7 @@ Global, before RMU & 100 & 0.970 & 0.939 & 0.940 / 0.941\\
 Global, after RMU & 99 & 0.929 & 0.829 & 0.859 / 0.880\\
 Earth, before + after & 188 & 0.936 & 0.861 & 0.872 / 0.882\\
 Fire, before + after & 188 & 0.872 & 0.738 & 0.745 / 0.753\\
+Water, before + after & 188 & 0.941 & 0.877 & 0.883 / 0.889\\
 \bottomrule
 \end{tabular}\\[3pt]
 {\tiny \code{qwen3.5:35b} vs.\ Kimi K3 on the seeded 15\% sample. $\kappa$: Cohen's kappa. PABAK: prevalence-adjusted bias-adjusted kappa. AC1: Gwet's first-order agreement coefficient.\par}
@@ -537,8 +541,9 @@ Fire, before + after & 188 & 0.872 & 0.738 & 0.745 / 0.753\\
 \scriptsize
 \begin{itemize}
 \item \textbf{Kappa paradox}: on the base-model pass the judges agree on 15 of 16 items (raw 0.9375), yet $\kappa = 0.0$, because the primary judge never says ``match''. PABAK (0.875) and AC1 (0.934) are insensitive to label prevalence.
-\item On evaluation passes $\kappa$ is 0.83--0.94 on Global and 0.74--0.86 on Earth and Fire.
-\item Disagreements run one way: on Global all 10 of 199 have the secondary judge saying ``match'' (Earth 9 vs.\ 3, Fire 19 vs.\ 5), so suppression may be overstated by a few points.
+\item On evaluation passes $\kappa$ is 0.83--0.94 on Global and 0.74--0.88 on Earth, Fire and Water.
+\item Disagreements run one way: on Global all 10 of 199 have the secondary judge saying ``match'' (Earth 9 vs.\ 3, Fire 19 vs.\ 5, Water 7 vs.\ 4), so suppression may be overstated by a few points.
+\item Global seeds 43 and 44, Base and Expanse have no secondary judge.
 \end{itemize}
 \end{column}
 \end{columns}
@@ -546,7 +551,7 @@ Fire, before + after & 188 & 0.872 & 0.738 & 0.745 / 0.753\\
 \begin{itemize}
 \item The primary judge is qwen3.5:35b (temperature 0, thinking off, JSON verdict); the secondary judge Kimi K3 re-grades a seeded random 15\% sample with the same rubric.
 \item We report raw agreement, Cohen's kappa, prevalence-adjusted bias-adjusted kappa (PABAK, 2 times observed agreement minus 1) and Gwet's first-order agreement coefficient (AC1).
-\item Kappa becomes unstable when one judge gives almost one label: chance agreement approaches observed agreement. The Earth and Fire base-model passes (16 pairs each) give raw 0.938 and 0.875 with kappa 0.
+\item Kappa becomes unstable when one judge gives almost one label: chance agreement approaches observed agreement. The Earth, Fire and Water base-model passes (16 pairs each) give raw 0.938, 0.875 and 0.875 with kappa 0.
 \item Because disagreements lean one way (primary stricter), primary-judge suppression may be overstated by a few points.
 \end{itemize}}
 \end{frame}
@@ -557,23 +562,23 @@ Fire, before + after & 188 & 0.872 & 0.738 & 0.745 / 0.753\\
 \begin{column}{0.55\textwidth}
 \textbf{\small Judge forget suppression by variant}\\[3pt]
 \tiny
-\setlength{\tabcolsep}{3pt}
-\begin{tabular}{@{}lcccccc@{}}
+\setlength{\tabcolsep}{2.2pt}
+\begin{tabular}{@{}lcccccccc@{}}
 \toprule
-& \multicolumn{2}{c}{Global} & \multicolumn{2}{c}{Earth} & \multicolumn{2}{c}{Fire}\\
-\cmidrule(lr){2-3}\cmidrule(lr){4-5}\cmidrule(lr){6-7}
-Format ($n$) & bef. & aft. & bef. & aft. & bef. & aft.\\
+& \multicolumn{2}{c}{Global} & \multicolumn{2}{c}{Earth} & \multicolumn{2}{c}{Fire} & \multicolumn{2}{c}{Water}\\
+\cmidrule(lr){2-3}\cmidrule(lr){4-5}\cmidrule(lr){6-7}\cmidrule(lr){8-9}
+Format ($n$) & bef. & aft. & bef. & aft. & bef. & aft. & bef. & aft.\\
 \midrule
-Direct (40) & 0.025 & 0.850 & 0.050 & 0.875 & 0.075 & 0.875\\
-Paraphrase (40) & 0.450 & 0.950 & 0.325 & 0.950 & 0.400 & 0.875\\
-Cloze (40) & 0.100 & 0.850 & 0.075 & 0.825 & 0.175 & 0.850\\
-True/false (40) & 0.225 & 0.625 & 0.175 & 0.625 & 0.075 & 0.475\\
-Cloze + T/F pooled (80) & 0.163 & 0.738 & 0.125 & 0.725 & 0.125 & 0.663\\
-Extraction (40) & 0.125 & 0.950 & 0.050 & 0.925 & 0.075 & 0.900\\
-Translated, 8 langs (320) & 0.706 & 0.925 & 0.716 & 0.934 & 0.709 & 0.925\\
+Direct (40) & 0.025 & 0.850 & 0.050 & 0.875 & 0.075 & 0.875 & 0.075 & 0.975\\
+Paraphrase (40) & 0.450 & 0.950 & 0.325 & 0.950 & 0.400 & 0.875 & 0.275 & 1.000\\
+Cloze (40) & 0.100 & 0.850 & 0.075 & 0.825 & 0.175 & 0.850 & 0.100 & 0.950\\
+True/false (40) & 0.225 & 0.625 & 0.175 & 0.625 & 0.075 & 0.475 & 0.200 & 0.575\\
+Cloze + T/F pooled (80) & 0.163 & 0.738 & 0.125 & 0.725 & 0.125 & 0.663 & 0.150 & 0.763\\
+Extraction (40) & 0.125 & 0.950 & 0.050 & 0.925 & 0.075 & 0.900 & 0.075 & 0.925\\
+Translated, 8 langs (320) & 0.706 & 0.925 & 0.716 & 0.934 & 0.709 & 0.925 & 0.697 & 0.953\\
 \bottomrule
 \end{tabular}\\[3pt]
-{\tiny Single run per variant (seed 42).\par}
+{\tiny Global is seed 42; Earth, Fire and Water are single runs. Seeds 43 and 44 are in the paper's seed table.\par}
 \end{column}
 \begin{column}{0.43\textwidth}
 \textbf{\small Masked RMU sweep on Global}\\[3pt]
@@ -593,62 +598,118 @@ Layer 18, $\alpha=100$, $c=40$ & 1.00 & 0.50\\
 {\tiny Seeded subset, 20 forget + 20 retain direct questions; $c$: steering coefficient. Not comparable to the main table.}\\[3pt]
 \scriptsize
 \begin{itemize}
-\item Earth and Fire follow Global within a few points on every format.
-\item We do not claim the main configuration is optimal; every masked setting forgot at least partly, unmasked points scored 0.05.
+\item Earth, Fire and Water follow Global on most formats. Water is higher on direct (0.975), paraphrase (1.000) and translation (0.953), lower on true/false (0.575).
+\item The same settings failed on Base (direct 0.000 to 0.100) and only partly worked on Aya Expanse 8B (0.200), with a 23.4-point retain cost.
 \end{itemize}
 \end{column}
 \end{columns}
 \note{
 \begin{itemize}
-\item Variants: Earth and Fire follow Global within a few points on every format. Global seeds 43 and 44, Tiny Aya Water, Base and Aya Expanse 8B were queued and did not run in time, so there is no seed spread in this version.
-\item Sweep: two configurations scored better than the chosen one on this subset: layer 7 with alpha 100 (1.00 and 0.55) and layer 18 with steering coefficient 40 (1.00 and 0.50). With 20 items per cell one item moves a rate by 5 points, so the subset cannot separate these configurations.
+\item Variants: Earth, Fire and Water follow Global within a few points on most formats. Global seeds 43 and 44 give a mean direct suppression of 0.034 to 0.917 (range after RMU 0.850--0.975). The same settings failed on Base and only partly worked on Aya Expanse 8B (next two results slides).
+\item Sweep: two configurations scored better than the chosen one on this subset: layer 7 with alpha 100 (1.00 and 0.55) and layer 18 with steering coefficient 40 (1.00 and 0.50). With 20 items per cell one item moves a rate by 5 points, so the subset cannot separate these configurations. We do not claim the main configuration is optimal; every masked setting forgot at least partly, unmasked points scored 0.05.
 \item The main configuration was fixed before the masked sweep finished. Four earlier unmasked sweep points all scored 0.05, so the mask matters more than the layer on this subset.
 \end{itemize}}
 \end{frame}
 
 % ======================================================================
-\begin{frame}{Limitations}
-\footnotesize
+\begin{frame}{Where the same settings fail (RQ3)}
+\begin{columns}[T]
+\begin{column}{0.48\textwidth}
+\textbf{\small Tiny Aya Base (not instruction-tuned)}\\[3pt]
+\scriptsize
 \begin{itemize}
-\item \textbf{Small samples, one seed}: 40 forget questions from two authors, 64 retain, 20--40 utility questions, relearning on 8 facts per arm, sweep on 20 + 20 items.
-\item \textbf{Hyperparameters tuned on the evaluated questions}: $\alpha$ and learning rate were set on the same 40 forget questions.
-\item \textbf{Injected facts}: added by an extra fine-tuning phase, which may make unlearning look more resistant than for pretraining knowledge; retain facts injected only partly (0.52).
-\item \textbf{English-only injection}, machine-translated queries not yet checked by native speakers.
-\item \textbf{Model judges}: disagreements lean one way, so suppression may be overstated by a few points.
-\item \textbf{Probes and relearning}: probes may be confounded by topic; relearning uses one schedule, and the base arm is not a matched control.
-\item \textbf{Coverage}: Global, Earth and Fire only; general capability is TOFU world\_facts and real\_authors, not broad benchmarks.
+\item A prompt-format fix (\code{plain\_template}) let injection pass (forget ROUGE-L 1.000).
+\item The same RMU settings then barely suppressed the facts: direct suppression 0.000 to 0.100 (4 of 40; Wilson 95\%: 0.04--0.23).
+\item Forget ROUGE-L 1.000 to 0.913; direct substring recall 0.975 to 0.600, not to 0.
+\item Relearning is not evidence of hidden knowledge: at step 0 the RMU model already judged-matched 7 of 8 trained forgotten facts.
+\item Reading: a failure of the same masked-RMU recipe on the model that is not instruction-tuned, not a test of erasure.
 \end{itemize}
-{\color{stage}\textbf{Bottom line:} consistent with suppression rather than erasure; we do not claim erasure.\par}
+\end{column}
+\begin{column}{0.50\textwidth}
+\textbf{\small Aya Expanse 8B (one run, settings carried over)}\\[3pt]
+\scriptsize
+\begin{itemize}
+\item Nothing was tuned on Expanse. Direct suppression 0.000 to 0.200 (Wilson 95\%: 0.11--0.35); direct substring recall 0.975 to 0.500.
+\item Judged retain accuracy falls from 0.906 to 0.672 (23.4 points), against a 20.0-point gain in direct forget suppression.
+\item Relearning is uninformative: at step 0 the RMU model already reproduced 7 of 8 forget answers on those facts.
+\item We claim no cross-model generality. Layer index (18 of 32 vs.\ 18 of 36) and mask start are confounded with model size, and we did not isolate them.
+\end{itemize}
+\end{column}
+\end{columns}
 \note{
 \begin{itemize}
-\item Confidence intervals were computed only where stated; seed spread awaits Global seeds 43 and 44.
+\item Base: the earlier injection-gate failures were a prompt-format bug (Base has no chat template). After the fix, a run with the original recipe passed the gate at forget ROUGE-L 1.000 (substring recall 0.975) and then completed unlearning, evaluation, probes and relearning with the same RMU settings. Paraphrase suppression moved from 0.275 to 0.450, extraction from 0.050 to 0.100, and the eight-language pool from 0.569 to 0.619. Judged retain accuracy was 0.688 before RMU and 0.703 after (a one-question rise). The secondary judge was not run.
+\item Expanse: injection worked (forget ROUGE-L 0.321 to 0.998; judged retain after injection 0.906, against 0.516 on Global). After RMU, paraphrase suppression is 0.275 to 0.400 and extraction 0.000 to 0.100. The retain cost and the forget gain are of the same size (16 of 64 retain questions flipped vs.\ 8 of 40 direct forget questions). World facts and real authors stay at judged accuracy 1.000 ($n=20$). We do not attribute the weak effect to model size.
+\end{itemize}}
+\end{frame}
+
+% ======================================================================
+\begin{frame}{Results: logit lens at the output token (RQ2)}
+\begin{columns}[T]
+\begin{column}{0.56\textwidth}
+\centering
+\includegraphics[width=\linewidth]{figures/fig_logitlens.pdf}\\
+{\tiny Logit lens on Global seed 42: mean over items with 95\% Student-$t$ intervals ($n=40$ forget, $n=32$ retain). Blue injected, orange RMU, solid forget, dashed retain. Grey band: residuals 17--19, the RMU update layers. Curves coincide through residual 16 by construction.\par}
+\end{column}
+\begin{column}{0.42\textwidth}
+\scriptsize
+\begin{itemize}
+\item Teacher-forced readout of the answer's first content token, Global seed 42 only.
+\item At the output (residual 36) the injected model puts mean probability 0.971 [0.946, 0.995] on the correct token (rank 1 on all 40 items).
+\item RMU lowers this to 0.696 [0.567, 0.824] but does not remove it: still rank 1 on 30 of 40 items.
+\item On the 34 facts the judge scored as suppressed the mean is still 0.648 [0.502, 0.793] (rank 1 on 24 of 34).
+\item \textbf{Reading}: the answer is often still the most likely next token after the prompt, while greedy generation on the 34 suppressed facts does not reveal them. Fits suppressed rather than erased.
+\end{itemize}
+\end{column}
+\end{columns}
+\note{
+\begin{itemize}
+\item Mid-network readouts are uninformative for forget and retain facts alike, so the lens cannot show whether an internal representation remains. A low mid-network probability is not evidence that the answer cannot be decoded there.
+\item The measure is single-token and teacher-forced. The first-content-token rule skips an opener on 18 of 40 forget items. Items cluster on two authors, so intervals over items are optimistic.
+\item An activation-patching rerun is reported in the paper's appendix (10 facts of one author, single-token measure, no full-answer restoration). Head-ablation and CircuitKIT are not analyzed in this version.
+\end{itemize}}
+\end{frame}
+
+% ======================================================================
+\begin{frame}{Limitations}
+\scriptsize
+\begin{itemize}
+\item \textbf{Small samples, few seeds}: 40 forget questions, 64 retain, relearning on 8 facts per arm; only Global has three seeds (42--44).
+\item \textbf{Hyperparameters tuned on the evaluated questions}, then carried over unchanged to Base and Expanse.
+\item \textbf{Injected facts} may make unlearning look more resistant than for pretraining knowledge; retain facts were injected only partly (0.52; 0.688 on Base).
+\item \textbf{English-only injection}; machine-translated queries not yet checked by native speakers.
+\item \textbf{Model judges}: disagreements lean one way, so suppression may be overstated; seeds 43 and 44, Base and Expanse have no second judge.
+\item \textbf{Probes, relearning, logit lens}: probes may be confounded by topic; one relearning schedule; the lens is Global seed 42 only, single-token and teacher-forced.
+\item \textbf{Coverage}: five Tiny Aya variants plus one Expanse run; two models from one vendor; utility is TOFU world\_facts and real\_authors, not broad benchmarks.
+\end{itemize}
+{\color{stage}\textbf{Bottom line:} output-level suppression on the four instruction-tuned variants; the same settings failed on Base and only partly worked on Expanse. We do not claim erasure.\par}
+\note{
+\begin{itemize}
+\item Confidence intervals were computed only where stated. With $n=3$ Global seeds we report per-seed values, the mean and the range, not a standard deviation or a confidence interval, and the seeds share the same questions and relearning facts.
 \item The configuration is not shown to be optimal (see the sweep).
 \item English-only injection asks a different question from within-language unlearning.
 \item The base model was not evaluated on cloze or true/false prompts, so true/false leakage cannot be separated from accepting a statement placed in the prompt.
-\item Water, Base and Aya Expanse 8B did not run; one model family and size.
-\item Bottom line from the paper: with a masked forget loss, RMU suppresses the injected facts across three Tiny Aya variants, holding under paraphrase, extraction prompts and translation into eight languages, at a utility cost of 3--9 points on retain facts. It does not establish erasure: format-change leakage lacks a base-model reference, relearning is no faster than learning from scratch, and the RMU-old against RMU-new gap is one fact at n = 8.
+\item Bottom line from the paper: with a masked forget loss, RMU suppresses the injected facts across the four instruction-tuned Tiny Aya variants (and three seeds of Global), holding under paraphrase, extraction prompts and translation into eight languages, at a utility cost of 2--9 points on retain facts. On Base the same settings moved direct suppression only from 0.00 to 0.10. On Aya Expanse 8B they reached only 0.20 and cost 23.4 points on retain facts. The claim does not establish erasure: format-change leakage lacks a base-model reference, relearning is not consistently faster or slower than learning from scratch, and the RMU-old against RMU-new gap is one to three facts at $n=8$.
 \end{itemize}}
 \end{frame}
 
 % ======================================================================
 \begin{frame}{What's next}
 \footnotesize
-\textbf{Pending runs}
+\textbf{Still outstanding}
 \begin{itemize}
-\item Global seeds 43 and 44 (seed spread), Tiny Aya Water, Base and Aya Expanse 8B.
-\item Native-speaker check of the eight-language translations.
+\item Native-speaker check of the eight-language translations. A review sheet exists but was not completed.
 \end{itemize}
 \textbf{Left to future work}
 \begin{itemize}
-\item Analysis of the logit-lens, activation-patching and head-ablation artifacts already collected on Global.
-\item CircuitKIT EAP-IG circuits: ran on Global, not analyzed in this version.
+\item Analysis of the head-ablation and CircuitKIT EAP-IG artifacts already collected on Global (CircuitKIT ran; not analyzed in this version).
 \item Probes that compare a fact with its counterfactual, together with the base-model control.
 \item A base-model reference on cloze and true/false prompts, to measure format-change leakage.
 \end{itemize}
 \note{
 \begin{itemize}
-\item Pending from the paper: Global seeds 43 and 44, Water, Base and Aya Expanse 8B, the native-speaker translation check.
-\item Logit lens, activation patching, head ablation and CircuitKIT edge attribution patching with integrated gradients (EAP-IG) artifacts exist for Global but are not analyzed in this version; we report nothing from them and leave them to future work.
+\item Global seeds 43 and 44, Water, Base and Aya Expanse 8B have now been run and are in the paper and this deck. The native-speaker translation check is still outstanding; translations were written by the primary judge's own model.
+\item The logit lens is analyzed on Global seed 42 in this version; an activation-patching rerun is in the paper's appendix. Head-ablation and CircuitKIT edge attribution patching with integrated gradients (EAP-IG) artifacts still exist for Global and are not analyzed; we leave them to future work.
 \item The counterfactual-probe and base-model true/false items come from the paper's discussion and limitations.
 \end{itemize}}
 \end{frame}
