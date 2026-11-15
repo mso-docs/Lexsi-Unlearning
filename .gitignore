@@ -75,12 +75,6 @@ data/translations.json
 # Generated publication staging (full HF dataset tree, Pages SQLite, etc.)
 release/
 
-# Generated GitHub Pages bundle (scripts/build_pages.sh). Commit the rebuilt
-# docs/ tree on Sunday with `git add -f docs/` after the final scrub, except
-# keep these ignored until then. docs/.nojekyll and docs/README.md are tracked.
-docs/data/
-docs/index.html
-docs/app.js
-docs/style.css
-docs/theme.css
-docs/theme-init.js
+# The GitHub Pages site lives in docs/ (landing page, assets, downloads, and
+# the Evalboard explorer under docs/evalboard/). Those files are tracked.
+# scripts/build_pages.sh writes the explorer into docs/evalboard/.

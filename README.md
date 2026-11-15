@@ -1,12 +1,19 @@
 # Unlearning vs. hiding (Lexsi Track 2b)
 
-Local scaffold for the Lexsi AI Safety and Alignment Hackathon, Track 2b (AI Safety and Correction), official problem statement 7 (unlearning), with statement 9 (locate the information) as the mechanistic half.
+Code, paper and artifacts for the Lexsi AI Safety and Alignment Hackathon, Track 2b (AI Safety and Correction), official problem statement 7 (unlearning), with statement 9 (locate the information) as the mechanistic half.
 
 Recommended title: **Unlearning vs. Hiding: Does Unlearning Remove Knowledge or Just Suppress Its Expression?**
 
-This repo is a starting scaffold only. **All experiment code and results are intended to be written during the hackathon window.** Registration is already confirmed.
+**Landing page for judges: [mso-docs.github.io/Lexsi-Unlearning](https://mso-docs.github.io/Lexsi-Unlearning/)** (paper, slides, demo Space, dataset, models, collection, code and a video slot, all in one place).
 
-Plan page: [Lexsi Track 2b plan: Unlearning vs. hiding](PROPOSAL.md)
+All experiment code and results in this repository were produced during the hackathon window. The result: with a masked forget loss, RMU suppresses the injected facts on the four instruction-tuned Tiny Aya variants at the output level, but this audit does not claim erasure. The same settings barely worked on Tiny Aya Base and only partly on Aya Expanse 8B. See the paper for every number.
+
+- Paper: [`paper/main.pdf`](paper/main.pdf) (source `paper/main.tex`)
+- Slides: [`presentation/main.pdf`](presentation/main.pdf), with speaker notes in [`presentation/main-notes.pdf`](presentation/main-notes.pdf)
+- Project proposal (the original plan): [PROPOSAL.md](PROPOSAL.md)
+- Demo Space: https://huggingface.co/spaces/mackenzietechdocs/lexsi-unlearning-demo
+- Dataset: https://huggingface.co/datasets/mackenzietechdocs/lexsi-unlearning-eval
+- Models: `mackenzietechdocs/lexsi-tiny-aya-{global,earth,fire,water}-rmu` on Hugging Face (CC-BY-NC-4.0)
 
 Hackathon site: https://hackathon.lexsi.ai/
 
@@ -164,7 +171,7 @@ scripts/prepublish_scan.sh    # gitleaks + PII scan; writes artifacts/prepublish
 .prepublish_allowlist         # reviewed false positives for the prepublish scan
 scripts/sync_from_spark.sh    # pull results; prefer --results (no weights)
 scripts/redact_release.py     # scrub traces/logs into release/ and docs/ (never in place)
-scripts/build_pages.sh        # sync (optional) → redact → ingest → static Evalboard in docs/
+scripts/build_pages.sh        # sync (optional) → redact → ingest → static Evalboard in docs/evalboard/
 src/lexsi_unlearn/traces.py   # canonical Evalboard v1 JSONL traces
 data/translations.json.example     # shape of data/translations.json (written by --stage translate)
 ```
@@ -174,14 +181,14 @@ Where a toolkit API was not fully confirmed in the installed docs, the code has 
 
 ## Public GitHub Pages dashboard
 
-A static, scrubbed Evalboard snapshot can be served from this repo's `docs/` folder. It is a read-only HTML/JSON bundle (no API server, no weights). Build it after the runs you want to publish have finished:
+A static, scrubbed Evalboard snapshot is served from this repo's `docs/evalboard/` folder, next to the landing page in `docs/`. It is a read-only HTML/JSON bundle (no API server, no weights). Build it after the runs you want to publish have finished:
 
 ```bash
 # Optional: pull traces, results, interp, circuitkit, logs, and translations from the Spark
 # (excludes checkpoints and *.safetensors). Does not touch running jobs.
 scripts/sync_from_spark.sh --results
 
-# Redact into release/hf_dataset/ and release/pages_src/, ingest, export docs/.
+# Redact into release/hf_dataset/ and release/pages_src/, ingest, export docs/evalboard/.
 # Fat interpretability dumps are downsampled for the Pages bundle; the full
 # scrubbed copies stay in release/hf_dataset/ (gitignored) for the HF dataset.
 scripts/build_pages.sh
@@ -189,11 +196,11 @@ scripts/build_pages.sh
 
 `scripts/redact_release.py` never edits `artifacts/` or `logs/` in place. It rewrites `/home/<user>/...` and `/Users/<user>/...` to `$LEXSI_ROOT`, redacts hostnames, emails, non-loopback IPs, and token-like strings (`hf_`, `sk-or-`, `sk-`, `ghp_`, Bearer, OpenRouter `gen-` ids), and fails if any such token remains. TOFU `real_authors` names (public figures) are listed in `artifacts/redact_report.md` and kept. Run `scripts/redact_release.py --dry-run` for a report without writing.
 
-`data/translations.json`, `artifacts/`, `logs/`, and `release/` are gitignored. Publish only the scrubbed Pages bundle under `docs/` and the scrubbed full tree as a Hugging Face dataset. Model checkpoints (`artifacts/rmu_unlearned/`, about 13 GB) belong in a Hugging Face model repo, not in git.
+`data/translations.json`, `artifacts/`, `logs/`, and `release/` are gitignored. Publish only the scrubbed Pages bundle under `docs/evalboard/` and the scrubbed full tree as a Hugging Face dataset. Model checkpoints (`artifacts/rmu_unlearned/`, about 13 GB) belong in a Hugging Face model repo, not in git.
 
-To publish the site, enable GitHub Pages on the `main` branch with the `/docs` folder as the source. This repository does not turn Pages on for you. Preview locally with `python3 -m http.server -d docs 8080`. Opening `docs/index.html` as a `file://` URL will not load the data.
+To publish the site, enable GitHub Pages on the `main` branch with the `/docs` folder as the source. This repository does not turn Pages on for you. Preview locally with `python3 -m http.server -d docs 8080` (the trace explorer is at `/evalboard/`). Opening the explorer as a `file://` URL will not load the data.
 
-Before any public push: run `scripts/prepublish_scan.sh` (gitleaks plus PII) on the commit, confirm the redaction report is clean, and wait for an explicit go-ahead. Do not commit `docs/data/` until the weekend runs are finished and scrubbed.
+Before any public push: run `scripts/prepublish_scan.sh` (gitleaks plus PII) on the commit, confirm the redaction report is clean, and wait for an explicit go-ahead. The scrubbed Evalboard snapshot under `docs/evalboard/` is included in this repository.
 
 ## Evalboard traces
 

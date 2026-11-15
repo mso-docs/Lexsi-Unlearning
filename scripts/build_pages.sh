@@ -3,9 +3,9 @@
 # Does not commit, push, or change GitHub Pages settings. Does not touch running jobs
 # except for a read-only rsync when --sync is passed.
 #
-#   scripts/build_pages.sh              # redact local artifacts/logs, export docs/
+#   scripts/build_pages.sh              # redact local artifacts/logs, export docs/evalboard/
 #   scripts/build_pages.sh --sync       # rsync --results from the Spark first
-#   scripts/build_pages.sh --dry-run    # redact report only; do not write release/ or docs/data
+#   scripts/build_pages.sh --dry-run    # redact report only; do not write release/ or docs/evalboard/data
 set -euo pipefail
 
 ROOT="$(cd "$(dirname "$0")/.." && pwd)"
@@ -21,7 +21,7 @@ usage() {
 Usage: scripts/build_pages.sh [--sync] [--dry-run]
 
   --sync      Run scripts/sync_from_spark.sh --results first (read-only rsync).
-  --dry-run   Write the redaction report only; do not write release/ or docs/.
+  --dry-run   Write the redaction report only; do not write release/ or docs/evalboard/.
 
   EVALBOARD_ROOT   Checkout of modular_dashboard (auto-detected if unset).
   TRIM_BYTES       Max interp artifact size in the Pages bundle (default 250000).
@@ -95,12 +95,12 @@ for f in "${traces[@]}"; do
     --output-dir "$ROOT/release/pages_src"
 done
 
-mkdir -p "$ROOT/docs"
+mkdir -p "$ROOT/docs/evalboard"
 python3 -m evalboard.export_static \
   --db "$DB" \
-  --out "$ROOT/docs" \
+  --out "$ROOT/docs/evalboard" \
   --trim-bytes "$TRIM_BYTES"
 
-echo "Pages bundle is at $ROOT/docs/. Preview with:"
+echo "Evalboard bundle is at $ROOT/docs/evalboard/. Preview the whole site with:"
 echo "  python3 -m http.server -d $ROOT/docs 8080"
-echo "Do not commit docs/data/ until the weekend runs are finished and scrubbed."
+echo "Do not commit docs/evalboard/data/ until the weekend runs are finished and scrubbed."

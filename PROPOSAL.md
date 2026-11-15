@@ -1,5 +1,7 @@
 # Lexsi Track 2b plan: Unlearning vs. hiding
 
+> **Note:** this is the original proposal, written before the experiments. The final paper, [Unlearning vs. Hiding](paper/main.pdf), reports what was actually done and found, including changes of plan (for example, the masked forget loss, and head-ablation and CircuitKIT artifacts that are collected but not analyzed).
+
 > Standalone project plan for the Lexsi AI Safety and Alignment Hackathon, Track 2b (AI Safety and Correction). Question: after unlearning, is designated knowledge erased or only suppressed? Initial submission is due Mon Nov 16, 6:59 AM ET. Registration is already confirmed. This plan is only for Lexsi.
 
 - **Track 2b**: AI Safety and Correction (Official problem: unlearning (statement 7))
