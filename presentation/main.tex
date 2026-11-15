@@ -33,15 +33,15 @@
   pdfproducer={LaTeX}
 }
 
-% ---- colours ----
+% ---- colors ----
 \definecolor{stage}{RGB}{35,55,59}
 \definecolor{accent}{RGB}{235,129,27}
-% toolkit tag colours (pipeline + setup)
+% toolkit tag colors (pipeline + setup)
 \definecolor{safecol}{RGB}{214,110,10}
 \definecolor{auditcol}{RGB}{30,110,120}
 \definecolor{circcol}{RGB}{170,35,45}
 \definecolor{stdcol}{gray}{0.50}
-% chart colours
+% chart colors
 \definecolor{beforecol}{gray}{0.70}
 \definecolor{aftercol}{RGB}{30,110,120}
 
@@ -511,7 +511,7 @@ Base, trained & 8 & 8 & 7\\
 \note{
 \begin{itemize}
 \item 30 fine-tuning steps (learning rate 2e-4, batch size 1, one run per arm). RMU-old trains the post-RMU model on 8 forgotten facts; RMU-new trains a fresh copy of the same model on 8 new fictitious TOFU authors; base-old trains the never-injected base model on the 8 forgotten facts (an acquisition reference, not a matched control).
-\item On the judge the RMU-old against RMU-new gap is positive in all six instruction-tuned runs: one fact for Global seed 42 (5 against 4), Earth (6 against 5), Fire (6 against 5) and Global seed 44 (7 against 6), two for Water (7 against 5) and three for Global seed 43 (7 against 4). The six runs reuse the same 8 forgotten and 8 new facts, so they are not independent replicates.
+\item On the judge the RMU-old against RMU-new gap is positive in all six instruction-tuned runs: one fact for Global seed 42 (5 against 4), Earth (6 against 5), Fire (6 against 5) and Global seed 44 (7 against 6), two for Water (7 against 5) and three for Global seed 43 (7 against 4). The six runs reuse the same 8 forgotten and 8 new facts, so they are not independent replicates. We initially expected the never-injected base to learn the same facts at least as fast as the RMU model in every variant; the data are mixed (RMU ahead in two, behind in two, level in two).
 \item At step 0 the trained-question counts are 0, 2 and 0 for Global seed 42 (RMU-old, base-old, RMU-new), 2, 2 and 0 for Earth, 1, 2 and 0 for Global seeds 43 and 44, Fire and Water, and 7, 2 and 0 for Base.
 \item Held-out paraphrases are mixed. The Expanse relearning run is uninformative (the RMU model already reproduced 7 of 8 forget answers at step 0 on those facts).
 \end{itemize}}
@@ -689,7 +689,7 @@ Layer 18, $\alpha=100$, $c=40$ & 1.00 & 0.50\\
 \item The configuration is not shown to be optimal (see the sweep).
 \item English-only injection asks a different question from within-language unlearning.
 \item The base model was not evaluated on cloze or true/false prompts, so true/false leakage cannot be separated from accepting a statement placed in the prompt.
-\item Bottom line from the paper: with a masked forget loss, RMU suppresses the injected facts across the four instruction-tuned Tiny Aya variants (and three seeds of Global), holding under paraphrase, extraction prompts and translation into eight languages, at a utility cost of 2--9 points on retain facts. On Base the same settings moved direct suppression only from 0.00 to 0.10. On Aya Expanse 8B they reached only 0.20 and cost 23.4 points on retain facts. The claim does not establish erasure: format-change leakage lacks a base-model reference, relearning is not consistently faster or slower than learning from scratch, and the RMU-old against RMU-new gap is one to three facts at $n=8$.
+\item Bottom line from the paper: with a masked forget loss, RMU suppresses the injected facts across the four instruction-tuned Tiny Aya variants (and three seeds of Global), holding under paraphrase, extraction prompts and translation into eight languages, at a utility cost of 1.6--9.4 points on retain facts. On Base the same settings moved direct suppression only from 0.00 to 0.10. On Aya Expanse 8B they reached only 0.20 and cost 23.4 points on retain facts. The claim does not establish erasure: format-change leakage lacks a base-model reference, relearning is not consistently faster or slower than learning from scratch, and the RMU-old against RMU-new gap is one to three facts at $n=8$.
 \end{itemize}}
 \end{frame}
 
@@ -730,7 +730,7 @@ Built with Lexsi's SafeTune and AuditKIT (CircuitKIT ran; not analyzed in this v
 \note{
 \begin{itemize}
 \item Code, dataset, checkpoints and the paper PDF are linked on this slide. The GitHub repository and Hugging Face artifacts are still private until publication.
-\item Releasing checkpoints depends on confirming un-gated republication under the base model's Creative Commons attribution non-commercial (CC-BY-NC) licence and Cohere's acceptable-use policy; gated base weights are not redistributed.
+\item Releasing checkpoints depends on confirming un-gated republication under the base model's Creative Commons attribution non-commercial (CC-BY-NC) license and Cohere's acceptable-use policy; gated base weights are not redistributed.
 \item Ethics: the forget set is synthetic (TOFU fictitious authors); no real personal data and no hazardous-knowledge data.
 \end{itemize}}
 \end{frame}
