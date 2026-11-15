@@ -30,3 +30,29 @@ email	*	^git@bitbucket\.org$	git SSH clone URL, not a personal inbox
 # The paper and Beamer author lines are the approved public byline (real name, not a handle).
 username	paper/main.tex	.+	author name approved for the public paper and deck
 username	presentation/main.tex	.+	author name approved for the public paper and deck
+
+# Scrubber source: these are the redaction tool's own detection regexes and
+# allowlisted documentation / public-DNS / special-use addresses, not leaked hosts or paths.
+path	src/lexsi_unlearn/scrub.py	/Users/	scrubber regex that detects home paths, not a real path
+path	src/lexsi_unlearn/scrub.py	/home/	scrubber regex that detects home paths, not a real path
+ip	src/lexsi_unlearn/scrub.py	8\.8\.8\.8	public DNS in the scrubber allowlist, not a private host
+ip	src/lexsi_unlearn/scrub.py	8\.8\.4\.4	public DNS in the scrubber allowlist, not a private host
+ip	src/lexsi_unlearn/scrub.py	1\.1\.1\.1	public DNS in the scrubber allowlist, not a private host
+ip	src/lexsi_unlearn/scrub.py	1\.0\.0\.1	public DNS in the scrubber allowlist, not a private host
+ip	src/lexsi_unlearn/scrub.py	9\.9\.9\.9	public DNS in the scrubber allowlist, not a private host
+ip	src/lexsi_unlearn/scrub.py	127\.0\.0\.0/8	loopback range in the scrubber allowlist
+ip	src/lexsi_unlearn/scrub.py	192\.0\.2\.0/24	documentation TEST-NET in the scrubber allowlist
+ip	src/lexsi_unlearn/scrub.py	198\.51\.100\.0/24	documentation TEST-NET in the scrubber allowlist
+ip	src/lexsi_unlearn/scrub.py	203\.0\.113\.0/24	documentation TEST-NET in the scrubber allowlist
+ip	src/lexsi_unlearn/scrub.py	224\.0\.0\.0/4	multicast range in the scrubber allowlist
+ip	src/lexsi_unlearn/scrub.py	169\.254\.0\.0/16	link-local range in the scrubber allowlist
+ip	src/lexsi_unlearn/scrub.py	240\.0\.0\.0/4	reserved range in the scrubber allowlist
+
+# CIDR / special-use ranges on SAFE_NETS (findings may be the address without the prefix length).
+ip	src/lexsi_unlearn/scrub.py	192\.0\.2\.0	documentation TEST-NET in the scrubber allowlist
+ip	src/lexsi_unlearn/scrub.py	198\.51\.100\.0	documentation TEST-NET in the scrubber allowlist
+ip	src/lexsi_unlearn/scrub.py	203\.0\.113\.0	documentation TEST-NET in the scrubber allowlist
+ip	src/lexsi_unlearn/scrub.py	224\.0\.0\.0	multicast range in the scrubber allowlist
+ip	src/lexsi_unlearn/scrub.py	169\.254\.0\.0	link-local range in the scrubber allowlist
+ip	src/lexsi_unlearn/scrub.py	240\.0\.0\.0	reserved range in the scrubber allowlist
+ip	src/lexsi_unlearn/scrub.py	127\.0\.0\.0	loopback range in the scrubber allowlist

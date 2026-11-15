@@ -1,0 +1,9 @@
+## License and provenance
+
+This dataset mixes MIT-licensed TOFU-derived text with generations from non-commercially licensed models, so the dataset as a whole is offered under **CC-BY-NC-4.0 (non-commercial use only)**. The TOFU-derived question and answer text remains available under its own MIT license. This is not legal advice.
+
+- **TOFU text.** The forget, retain, `world_facts` and `real_authors` data come from TOFU (Maini et al., 2024), MIT-licensed (dataset-card metadata and code repository). TOFU's fictitious authors were generated with GPT-4.
+- **Model generations.** The traces, results and logs contain outputs of Tiny Aya (Global, Earth, Fire, Water, Base) and Aya Expanse 8B, which are CC-BY-NC-4.0 and also require adherence to Cohere Labs' Acceptable Use Policy. That policy prohibits, among other things, generating synthetic data from the models for commercial purposes. Use of these records is therefore non-commercial only.
+- **Translations.** `translations.json` and `translations_review.md` are machine translations of TOFU text produced by `qwen3.5:35b` through Ollama (Apache 2.0 on its Hugging Face release; the Ollama packaging was not checked separately). They have not been checked by native speakers.
+- **Judge outputs.** Verdicts and rationales come from `qwen3.5:35b` and from `moonshotai/kimi-k3` via OpenRouter. The Kimi K3 License is permissive, with conditions aimed at large commercial model-as-a-service operators and attribution for very large products. Neither model's license restricts non-commercial research use of the outputs.
+- **What we checked and did not.** We found no license term that prevents publishing these records for non-commercial use. We did not confirm with Cohere whether derivatives of the gated Tiny Aya weights may be shared without a gate (the license text sets no gating requirement), and we did not review OpenRouter's or the providers' terms of service for outputs.
