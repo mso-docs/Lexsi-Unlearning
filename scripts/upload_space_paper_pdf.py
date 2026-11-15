@@ -54,6 +54,10 @@ def host_re() -> re.Pattern[str]:
                 continue
             if not val or "/" in val or "XXXX" in val:
                 continue
+            # Bare tokens shorter than 8 letters collide with ordinary
+            # paper words (author affiliation, "stream", etc.).
+            if "." not in val and len(val) < 8:
+                continue
             tokens.append(re.escape(val))
     return re.compile(r"\b(?:%s)\b" % "|".join(tokens), re.I)
 
