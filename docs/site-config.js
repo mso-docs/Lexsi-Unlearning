@@ -9,6 +9,6 @@
    video section stay hidden, so the page never shows a broken embed.
    ============================================================ */
 window.SITE_CONFIG = {
-  VIDEO_URL: "",
+  VIDEO_URL: "https://youtu.be/BuCfLNA-gfc",
   VIDEO_TITLE: "Unlearning vs. Hiding: project walkthrough"
 };
