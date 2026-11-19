@@ -4,7 +4,7 @@ Code, paper and artifacts for the Lexsi AI Safety and Alignment Hackathon, Track
 
 Recommended title: **Unlearning vs. Hiding: Does Unlearning Remove Knowledge or Just Suppress Its Expression?**
 
-**Landing page for judges: [mso-docs.github.io/Lexsi-Unlearning](https://mso-docs.github.io/Lexsi-Unlearning/)** (paper, slides, demo Space, dataset, models, collection, code and a video slot, all in one place).
+**Project landing page: [mso-docs.github.io/Lexsi-Unlearning](https://mso-docs.github.io/Lexsi-Unlearning/)** (paper, slides, demo Space, dataset, models, collection, code, and a video, all in one place).
 
 All experiment code and results in this repository were produced during the hackathon window. The result: with a masked forget loss, RMU suppresses the injected facts on the four instruction-tuned Tiny Aya variants at the output level, but this audit does not claim erasure. The same settings barely worked on Tiny Aya Base and only partly on Aya Expanse 8B. See the paper for every number.
 
@@ -271,3 +271,7 @@ Forget-set accuracy by query format; retain-set and general capability (AuditKIT
 ## What a null result means
 
 If RMU (or NPO) lowers behavioral accuracy **and** collapses probe, logit-lens, and relearning recovery to the original base-model baseline, that looks more like removal than hiding for this synthetic set. If behavioral accuracy barely moves, unlearning failed — report that as a negative method result. A mixed result (surface forgetting with late-layer recoverability or fast relearning) is still a complete Track 2b paper if the measurements are clean.
+
+## License
+
+The source code in this repository is released under the MIT License (see [`LICENSE`](LICENSE)). Checkpoints, traces, generations, and other artifacts derived from Tiny Aya or Aya Expanse 8B remain under CC-BY-NC-4.0 (non-commercial), matching those models' terms. See the paper's Ethics section for the full license notes.
