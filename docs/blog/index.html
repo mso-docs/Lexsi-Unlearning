@@ -1,0 +1,90 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Unlearning vs. Hiding: Does Unlearning Remove Knowledge, or Just Suppress Its Expression?</title>
+<meta name="description" content="Lower accuracy on direct questions does not show that designated knowledge is gone. An audit of RMU on Tiny Aya: output-level suppression held, but this study does not claim erasure.">
+<meta name="author" content="Mackenzie O&#x27;Brien">
+<meta name="theme-color" content="#17181c">
+<meta name="referrer" content="strict-origin-when-cross-origin">
+<meta property="og:type" content="article">
+<meta property="og:title" content="Unlearning vs. Hiding: Does Unlearning Remove Knowledge, or Just Suppress Its Expression?">
+<meta property="og:description" content="Lower accuracy on direct questions does not show that designated knowledge is gone. An audit of RMU on Tiny Aya: output-level suppression held, but this study does not claim erasure.">
+<meta property="og:url" content="https://mso-docs.github.io/Lexsi-Unlearning/blog/">
+<meta property="og:image" content="https://mso-docs.github.io/Lexsi-Unlearning/assets/og-image.png">
+<meta property="og:image:width" content="1200"><meta property="og:image:height" content="630">
+<meta name="twitter:card" content="summary_large_image">
+<link rel="canonical" href="https://mso-docs.github.io/Lexsi-Unlearning/blog/">
+<link rel="icon" href="../assets/favicon.svg" type="image/svg+xml">
+<link rel="preload" href="../assets/fonts/inter-latin-wght-normal.woff2" as="font" type="font/woff2" crossorigin>
+<link rel="preload" href="../assets/fonts/source-serif-4-latin-wght-normal.woff2" as="font" type="font/woff2" crossorigin>
+<link rel="stylesheet" href="../assets/site.css">
+<style>
+/* Blog reading layout on top of the shared landing-page design system. */
+.wrap{max-width:920px}
+.hero{padding:18px 36px 32px}
+.hero h1{font-size:clamp(26px,4.2vw,44px);max-width:none}
+.back{display:inline-flex;align-items:center;gap:8px;font:600 13px/1 var(--sans);color:#fff;text-decoration:none;padding:10px 14px;border-radius:11px;background:rgba(255,255,255,.07);border:1px solid rgba(255,255,255,.16)}
+.back:hover{color:#fff;background:rgba(249,115,22,.18);border-color:rgba(253,186,116,.55)}
+article.prose{max-width:760px;margin:40px 0 0;font:400 17.5px/1.75 var(--sans);color:#2c2e36}
+article.prose h2{margin:2.15em 0 .65em}
+article.prose h2:first-child{margin-top:0}
+article.prose p{margin:0 0 1.05em}
+article.prose p:last-child{margin-bottom:0;padding:18px 20px;background:#fff;border:1px solid var(--line);border-radius:16px;box-shadow:0 1px 2px rgba(23,24,28,.04)}
+@media (max-width:680px){
+  .hero{padding:16px 20px 28px}
+  article.prose{font-size:16.5px;margin-top:28px}
+}
+@media print{
+  .back,.badges{display:none}
+}
+</style>
+</head>
+<body>
+<a class="skip" href="#main">Skip to content</a>
+<div class="wrap">
+<header class="hero">
+  <nav class="nav" aria-label="Project">
+    <a class="brand" href="../"><span class="mark" aria-hidden="true">&#9638;</span>Mac Labs AI <span class="sub">Research portfolio</span></a>
+    <a class="back" href="../">Back to project</a>
+  </nav>
+  <p class="eyebrow">Blog post &middot; Lexsi AI Safety &amp; Alignment Hackathon &middot; Track 2b</p>
+  <h1>Unlearning vs. Hiding: Does Unlearning Remove Knowledge, or Just Suppress Its Expression?</h1>
+  <p class="byline"><strong>Mackenzie O&rsquo;Brien</strong>, Mac Labs AI &middot; November 2026</p>
+  <div class="badges">
+    <a class="badge primary" href="../downloads/Lexsi-Unlearning-paper.pdf">Paper <small>PDF</small></a>
+    <a class="badge" href="https://github.com/mso-docs/Lexsi-Unlearning" target="_blank" rel="noopener">Code</a>
+    <a class="badge" href="https://huggingface.co/collections/mackenzietechdocs/lexsi-unlearning-vs-hiding-6af7ae6b51c779a9e34418c6" target="_blank" rel="noopener">Hugging Face collection</a>
+  </div>
+</header>
+<main id="main">
+<article class="prose">
+<p>Lower accuracy on direct questions does not show that designated knowledge is gone. I audited Representation Misdirection for Unlearning (RMU) on Tiny Aya, Cohere Labs&rsquo; 3.35B multilingual model, in a solo entry for Track 2b of the Lexsi AI Safety and Alignment Hackathon. With a fix to the forget loss, RMU stopped the model from stating 40 injected fictitious-author facts under direct questions, paraphrases, extraction prompts, and translations into eight languages. The same audit does not show that the facts were erased.</p>
+<p>This is a measurement study, not a new unlearning method. The facts come from the Task of Fictitious Unlearning (TOFU) <code>forget01</code> split. I taught them to the model with Low-Rank Adaptation (LoRA), then unlearned with SafeTune&rsquo;s RMU trainer at decoder layer 18, updating layers 16-18, and scored the result with AuditKIT plus a helper judge. I repeated the protocol on Tiny Aya Earth, Fire, Water, and Base, and ran one transfer of the same settings to Aya Expanse 8B. Code, paper, slides, a walkthrough video, and the Hugging Face artifacts are collected at <a href="https://mso-docs.github.io/Lexsi-Unlearning/">mso-docs.github.io/Lexsi-Unlearning</a>.</p>
+<h2 id="standard-rmu-did-nothing-until-the-forget-loss-was-masked">Standard RMU did nothing until the forget loss was masked</h2>
+<p>Out of the box, RMU left the injected facts in place. A 360-token system preamble, plus attention-sink tokens, dominated the forget loss, which stayed flat near 3.5. Four unmasked settings left forget ROUGE-L (answer overlap) at 0.92-0.97, against 0.97 after injection.</p>
+<p>Masking the forget loss to first-user-turn tokens changed that. With alpha 100, steering coefficient 20, and 80 steps, forget ROUGE-L fell to 0.32. Every later result uses that masked recipe.</p>
+<h2 id="output-level-suppression-held-under-several-prompt-types-at-a-modest-retain-cost">Output-level suppression held under several prompt types, at a modest retain cost</h2>
+<p>A helper judge (<code>qwen3.5:35b</code>, with a seeded 15% re-grade by Kimi K3 on the main Global run) scored whether an output still revealed the injected fact. On Tiny Aya Global, the mean of seeds 42-44 for judge forget suppression rose from 0.03 to 0.92 on direct questions (n = 40 per seed), from 0.33 to 0.95 on paraphrases, and from 0.08 to 0.95 on extraction prompts. Across eight machine-translated languages it rose from 0.71 to 0.93. Earth, Fire, and Water, each run once, behaved alike (direct suppression after RMU of 0.875, 0.875, and 0.975).</p>
+<p>Judged accuracy on retained facts fell 1.6 to 9.4 points (Global mean 0.49 to 0.44). Format changes leaked: the pooled cloze and true/false bucket reached only 0.79 after RMU, driven by true/false (0.70).</p>
+<h2 id="the-same-settings-failed-on-base-and-only-partly-worked-on-a-larger-model">The same settings failed on Base and only partly worked on a larger model</h2>
+<p>Tiny Aya Base is not instruction-tuned. After a prompt-format bug in my evaluation code was fixed, injection succeeded, but the same RMU settings moved direct suppression only from 0.00 to 0.10 and left forget ROUGE-L at 0.913. That is a failure of the transferred recipe, not a missing result.</p>
+<p>On Aya Expanse 8B, run once with no retuning, direct suppression reached only 0.20, and judged retain accuracy fell from 0.91 to 0.67. The retain loss and the forget gain were about the same size, so I make no cross-model claim. Model size is confounded with the layer index, the mask start, and the absence of any sweep.</p>
+<h2 id="what-this-does-not-show">What this does not show</h2>
+<p>I do not claim erasure. After 30 fine-tuning steps the RMU model recovered 5, 7, and 7 of 8 forgotten facts across Global seeds 42-44, against 4, 4, and 6 of 8 new facts on the same model. The gap is one to three facts at n = 8, too small to call significant, and relearning was not consistently faster than learning from scratch.</p>
+<p>Linear probes that try to separate forget from retain questions reach AUROC 0.92-1.00 from layer 1 up, but a never-injected base model does as well. Those probes reflect surface differences between question topics, not stored knowledge. A teacher-forced logit lens on Global seed 42 (n = 40) shows RMU lowering the first content-token probability from 0.971 to 0.696, which is a drop, not a removal. Single-site activation patching, on 10 facts of one author, restores only part of that first-token gap and does not localize an internal representation.</p>
+<p>The translations were written and graded by the same helper model, and no native speaker has signed off on them. Only Global has more than one seed. Alpha and the learning rate were set on the same 40 forget questions that were later scored. Cohen&rsquo;s kappa is uninformative when labels are one-sided, so the paper reports raw and prevalence-robust agreement instead.</p>
+<p>The practical lessons are narrower, and I think they travel. Check that the forget loss actually moves. Evaluate in the same prompt format used at training. Score paraphrase, extraction, translation, and format-change prompts, not just direct questions. A drop in direct-question accuracy is not, by itself, evidence that the knowledge is gone.</p>
+<p>Paper: <a href="https://mso-docs.github.io/Lexsi-Unlearning/downloads/Lexsi-Unlearning-paper.pdf">Unlearning vs. Hiding (PDF)</a><br>
+Code: <a href="https://github.com/mso-docs/Lexsi-Unlearning" target="_blank" rel="noopener">github.com/mso-docs/Lexsi-Unlearning</a><br>
+Demo, dataset, and checkpoints: <a href="https://huggingface.co/collections/mackenzietechdocs/lexsi-unlearning-vs-hiding-6af7ae6b51c779a9e34418c6" target="_blank" rel="noopener">Hugging Face collection</a></p>
+</article>
+</main>
+<footer>
+<p>Mackenzie O&rsquo;Brien, Mac Labs AI. November 2026.</p>
+<p><a href="../">Back to the project landing page</a>. No analytics, cookies or third-party requests. Fonts are self-hosted.</p>
+</footer>
+</div>
+</body>
+</html>

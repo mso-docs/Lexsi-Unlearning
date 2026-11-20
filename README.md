@@ -6,6 +6,8 @@ Recommended title: **Unlearning vs. Hiding: Does Unlearning Remove Knowledge or 
 
 **Project landing page: [mso-docs.github.io/Lexsi-Unlearning](https://mso-docs.github.io/Lexsi-Unlearning/)** (paper, slides, demo Space, dataset, models, collection, code, and a video, all in one place).
 
+**Blog post: [Unlearning vs. Hiding](https://mso-docs.github.io/Lexsi-Unlearning/blog/)** (source [`blog/unlearning-vs-hiding.md`](blog/unlearning-vs-hiding.md)).
+
 All experiment code and results in this repository were produced during the hackathon window. The result: with a masked forget loss, RMU suppresses the injected facts on the four instruction-tuned Tiny Aya variants at the output level, but this audit does not claim erasure. The same settings barely worked on Tiny Aya Base and only partly on Aya Expanse 8B. See the paper for every number.
 
 - Paper: [`paper/main.pdf`](paper/main.pdf) (source `paper/main.tex`)
